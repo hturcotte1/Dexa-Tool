@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>DEXA Results Workflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one centered column; a single question card at a time, path-so-far trail beneath. */
+:root{
+  --bg:#F3F5F8; --card:#FFFFFF; --ink:#18212E; --muted:#5A6577; --line:#D9DEE6;
+  --accent:#2F5D8A; --accent-ink:#FFFFFF; --accent-soft:#E6EEF6;
+  --ok:#2E6B4F; --ok-soft:#E5F2EB; --warn:#8A5A12; --warn-soft:#FBF0DC; --err:#A33A2B;
+  --font-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161D; --card:#19202A; --ink:#E6EAF0; --muted:#9AA5B5; --line:#2C3542;
+  --accent:#7FA9D6; --accent-ink:#0E1620; --accent-soft:#1F2C3B;
+  --ok:#7CC6A0; --ok-soft:#18291F; --warn:#E3B565; --warn-soft:#2E2414; --err:#F08A7A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161D; --card:#19202A; --ink:#E6EAF0; --muted:#9AA5B5; --line:#2C3542;
+  --accent:#7FA9D6; --accent-ink:#0E1620; --accent-soft:#1F2C3B;
+  --ok:#7CC6A0; --ok-soft:#18291F; --warn:#E3B565; --warn-soft:#2E2414; --err:#F08A7A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+h1{font-size:24px;font-weight:600;margin:0;text-wrap:balance}
+.test{display:inline-block;margin-top:6px;font-size:12px;font-weight:500;color:var(--warn);background:var(--warn-soft);padding:3px 8px;border-radius:4px;align-self:flex-start}
+.scope{margin:0;font-size:14px;color:var(--ink);background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:18px}
+.step{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+h2{font-size:20px;font-weight:600;margin:0;text-wrap:balance;line-height:1.3}
+.hint{color:var(--muted);font-size:14px;margin:-8px 0 0}
+.choices{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}
+.choice{flex:1 1 140px;padding:14px 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font-weight:500;font-size:16px;text-align:left}
+.choice:hover{border-color:var(--accent);background:var(--accent-soft)}
+.choices.col{flex-direction:column}
+.infobtn{align-self:flex-start;margin-top:-10px}
+.info{font-size:14px;background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:4px 14px;margin-top:-8px}
+.info p{margin:10px 0}
+.choices.col .choice{flex:none;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.choice small{font-size:13px;font-weight:400;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:14px;font-weight:500}
+.field .opt{color:var(--muted);font-weight:400}
+.lbl{font-size:14px;font-weight:500}
+.segs{display:flex;flex-wrap:wrap;gap:8px}
+.seg{padding:9px 14px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500}
+.seg:hover{border-color:var(--accent)}
+.seg.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+input,select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%;max-width:260px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row .field{flex:1 1 160px}
+.err{color:var(--err);font-size:13px;min-height:0}
+.primary{align-self:flex-start;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:12px 20px;font-weight:600}
+.nav{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap}
+.link{background:none;border:0;color:var(--accent);padding:4px 0;font-weight:500;font-size:14px}
+.trail{display:flex;flex-direction:column;gap:6px}
+.trail h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 2px}
+.trail ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.trail li{display:flex;justify-content:space-between;gap:12px;font-size:14px;border-bottom:1px dashed var(--line);padding:4px 0}
+.trail li span:first-child{color:var(--muted);min-width:0}
+.trail li span:last-child{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.outcome{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:8px;background:var(--ok-soft);color:var(--ok)}
+.outcome.tbd{background:var(--warn-soft);color:var(--warn)}
+.outcome strong{font-size:17px}
+.outcome span{font-size:14px;color:var(--ink)}
+.out-block{display:flex;flex-direction:column;gap:8px}
+.out-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.out-head h3{font-size:14px;font-weight:600;margin:0}
+.copy{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:7px 14px;font-weight:600;font-size:14px;min-width:84px}
+.copy.done{background:var(--ok);color:var(--card)}
+.box{font-family:var(--font-mono);font-size:14px;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-word;user-select:all}
+.box.msg{font-family:var(--font-body);font-size:15px;user-select:text}
+.draft{font-size:12px;color:var(--warn)}
+footer{font-size:12px;color:var(--muted);line-height:1.5}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .18s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Bone density · in-basket</span>
+    <h1>DEXA results workflow</h1>
+    <span class="test">Test version · no patient identifiers</span>
+  </header>
+  <p class="scope"><strong>For patients 50 and older with eGFR above 35 only.</strong> For younger patients, interpret by Z-score. For eGFR 35 or below, use clinical judgment (most bisphosphonates are not recommended).</p>
+  <section class="card" id="card" aria-live="polite"></section>
+  <section class="trail" id="trail" hidden>
+    <h3>Answers so far</h3>
+    <ol id="trailList"></ol>
+  </section>
+  <footer>Decision aid only. Thresholds: BHOF treatment thresholds (≥20% major osteoporotic / ≥3% hip); T2DM repeat interval per ADA Standards of Care (2–3 years); other intervals are clinic defaults by lowest T-score. Use clinical judgment.</footer>
+</div>
+
+<script>
+const A = {}; let stack = ['report'];
+const fmtDate = s => { const [y,m,d]=s.split('-'); return `${+m}/${+d}/${y}`; };
+const fmtT = t => (t<0?'−':'')+Math.abs(t).toFixed(1);
+const yn = v => v ? 'Yes' : 'No';
+const osteoRange = () => A.t <= -2.5;
+const pa = () => stack.includes('priorDate');
+const nc = () => stack.includes('whyNo') && A.whyNo==='Not a candidate';
+const hol = () => stack.includes('txEnd');
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DRUGS = {'Alendronate':{name:'alendronate',typ:5},'Risedronate or ibandronate':{name:'risedronate/ibandronate',typ:2},'Zoledronic acid (IV)':{name:'zoledronic acid',typ:3}};
+const fmtMY = s => { const [y,m]=s.split('-'); return `${+m}/${y}`; };
+const holYears = () => { const [y,m]=A.date.split('-').map(Number), [ey,em]=A.txEnd.split('-').map(Number); return ((y*12+m)-(ey*12+em))/12; };
+const BMD_INFO = `<p><strong>Where to look:</strong> the results table. Use the column labeled <em>Change vs. Previous %</em>, not change vs. baseline.</p><p><strong>Which rows:</strong> only the summary sites: L1–L4 (the combined spine value), total hip, and femoral neck. Ignore single vertebrae and other sub-regions.</p><p><strong>Which changes count:</strong> only changes the report marks as significant, usually with an asterisk in a <em>Sig?</em> column. Pick the largest significant drop. If nothing is marked significant, choose <em>No real change</em>.</p><p><strong>Why:</strong> a change is significant when it is larger than the facility’s least significant change (LSC), the smallest change the machine can reliably detect, about 3% at the spine and 5% at the hip. Smaller changes may be measurement error.</p><p><strong>No significance marker on the report?</strong> Count a drop only if it is at least 3% at the spine or 5% at the hip.</p><p><strong>Spine caution:</strong> arthritis can make the spine look stable or improved. If the spine and hip disagree, go with the hip.</p><p><strong>Example:</strong> spine −7.0%*, left total hip −5.5%*, right total hip −4.1% (no asterisk). The largest significant drop is 7.0%, so choose <em>Moderate drop</em>.</p>`;
+const why = () => !stack.includes('whyNo') ? 'not on treatment' : nc() ? 'not on treatment (not a candidate due to comorbidity)' : 'not on treatment (patient preference)';
+
+const nodes = {
+  report:{kind:'report', q:'Enter the DEXA results', hint:'From the report header and summary table.'},
+  dm:{kind:'yn', q:'Does the patient have diabetes?', hint:'Diabetes shortens the repeat DEXA interval (ADA).', label:'Diabetes', yes:'@repeat', no:'@repeat'},
+  fx:{kind:'yn', q:'Fragility fracture in the last 6 months?', hint:'Low-trauma fracture, such as a fall from standing height or less.', label:'Fragility fracture, last 6 mo', yes:'@fx_appt', no:()=>osteoRange()?'priordx':'tbs'},
+  priordx:{kind:'yn', q:'Prior diagnosis of osteoporosis?', label:'Prior osteoporosis diagnosis', yes:'osHxTx', no:()=>osteoRange()?'@appt_os':'@appt_frax'},
+  osHxTx:{kind:'yn', q:'History of osteoporosis treatment?', label:'History of treatment', yes:'txDrug', no:'priorAvail'},
+  txDrug:{kind:'multi', q:'Which medication did the patient complete?', hint:'This branch assumes the patient is on a drug holiday.', label:'Medication',
+    opts:[['Alendronate','Oral, weekly','txEnd'],['Risedronate or ibandronate','Oral','txEnd'],['Zoledronic acid (IV)','Yearly infusion','txEnd'],['Anabolic agent','Teriparatide, abaloparatide, romosozumab','@anab']]},
+  txEnd:{kind:'txend', q:()=>`When was the last dose of ${DRUGS[A.txDrug].name}?`, hint:'Month and year are enough.'},
+  priorAvail:{kind:'yn', q:'Is the prior DEXA available for comparison?', hint:'Answer No if the prior scan was done at a different facility or on a different machine. Change can only be measured reliably on the same machine.', label:'Prior DEXA available', yes:'priorDate', no:()=>hol()?'@hol_stable':'disc2y'},
+  priorDate:{kind:'pdate', q:'When was the prior DEXA?', hint:'Month and year are enough.'},
+  discSince:{kind:'yn', q:()=>`Has osteoporosis treatment been discussed since the prior DEXA (${fmtMY(A.priorDate)})?`, label:'Treatment discussed since prior', yes:'whyNo', no:'@os_appt'},
+  whyNo:{kind:'multi', q:'Why is the patient not on treatment?', label:'Reason not treated',
+    opts:[['Patient preference','Declined treatment',()=>pa()?'bmd':'@os_stable'],['Not a candidate','Medical comorbidity',()=>pa()?'bmd':'@os_stable']]},
+  disc2y:{kind:'yn', q:'Has osteoporosis treatment been discussed in the past 2 years?', label:'Treatment discussed, past 2 yr', yes:'whyNo', no:'@os_appt'},
+  bmd:{kind:'multi', q:'How much has bone density dropped since the prior scan?', hint:'Use the largest drop the report marks as significant.', label:'BMD vs prior', info:BMD_INFO,
+    opts:[['No real change','Not marked significant, or higher','@os_stable'],['Mild drop','3 to 5% lower','@os_mild'],['Moderate drop','5 to 10% lower','@os_mod'],['Large drop','More than 10% lower','@os_severe']]},
+  hbmd:{kind:'multi', q:'How much has bone density dropped since the prior scan?', hint:'Use the largest drop the report marks as significant.', label:'BMD vs prior', info:BMD_INFO,
+    opts:[['No real change','Not marked significant, or higher','@hol_stable'],['Mild drop','3 to 5% lower','@hol_mild'],['Moderate drop','5 to 10% lower','@hol_mod'],['Large drop','More than 10% lower','@hol_large']]},
+  tbs:{kind:'yn', q:'Was the scan done with TBS?', hint:'Trabecular bone score section on the report.', label:'Scan with TBS', yes:'frax', no:'frax'},
+  frax:{kind:'frax', q:()=>A.tbs?'Enter the TBS-adjusted FRAX':'Enter the FRAX', hint:'10-year probabilities from the report.'},
+};
+const ynKeys = {dm:'dm',fx:'fx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
+const CAL = `\n\nTo keep your bones strong, most adults over 50 need about 1,000 to 1,200 mg of calcium a day from food and supplements combined. If you don't get that much from your diet, a calcium supplement can make up the difference. I usually recommend calcium citrate, which is well absorbed and can be taken with or without food. Take no more than 500 to 600 mg at a time, and split larger amounts through the day.\n\nFor a list of calcium-rich foods and how much calcium they contain: https://ods.od.nih.gov/factsheets/Calcium-Consumer/\n\nRegular weight-bearing exercise, enough vitamin D, and preventing falls also help protect your bones.`;
+
+function interval(){
+  if (A.dm) return A.t <= -2.0 ? {txt:'1–2 years',lo:1,basis:'T2DM with lowest T-score ≤ −2.0'} : {txt:'2–3 years',lo:2,basis:'ADA Standards of Care (diabetes)'};
+  if (A.t > -1.0) return {txt:'10 years',lo:10,basis:'Lowest T-score above −1.0'};
+  if (A.t > -1.5) return {txt:'7–10 years',lo:7,basis:'Mild osteopenia (−1.0 to −1.49)'};
+  if (A.t > -2.0) return {txt:'3–5 years',lo:3,basis:'Moderate osteopenia (−1.5 to −1.99)'};
+  return {txt:'1–2 years',lo:1,basis:'Advanced osteopenia (−2.0 to −2.49)'};
+}
+function dueBy(years){ const [y,m]=A.date.split('-'); return `${+m}/${+y+years}`; }
+
+function lineStart(){
+  let s = `DEXA ${fmtDate(A.date)}, lowest T-score ${fmtT(A.t)}${A.site?` (${A.site})`:''}`;
+  if (A.mof!=null) s += `, ${A.tbs?'FRAX-TBS':'FRAX'} ${A.mof}% MOF / ${A.hip}% hip`;
+  if (stack.includes('priorDate')) s += `, vs prior DEXA ${fmtMY(A.priorDate)}`;
+  return s;
+}
+
+function outcome(id){
+  const iv = interval();
+  const NURSE = 'Please call patient and let them know that their bone density test shows osteoporosis and it is important that they schedule an appointment to discuss treatment options. Prior to the appointment, they should come to the lab for some additional lab testing. Please order BMP, PTH, 25-OH vitamin D, and CBC for diagnosis of osteoporosis.';
+  const APPT = 'Appointment required to discuss treatment';
+  const p = pa(), n = nc();
+  const d = DRUGS[A.txDrug], hy = hol()&&d ? holYears() : 0, long = hol() && d && hy > d.typ;
+  const holLine = hol()&&d ? `osteoporosis, on drug holiday from ${d.name} since ${fmtMY(A.txEnd)} (${hy.toFixed(1)} yr${long?', longer than typical':''})` : '';
+  const holDrop = (deg,pct,adv) => ({title:'Appointment recommended to discuss restarting treatment', note:`BMD ${deg} decreased (${pct}) since prior while on holiday.`,
+    plan:`${holLine}; BMD ${deg} decreased (${pct}) vs prior; appointment recommended via MyChart to discuss restarting treatment.`,
+    msg:`Your bone density has dropped ${adv} since your last scan, which suggests the protective effect of ${d&&d.name} is wearing off. I recommend scheduling an appointment to talk about restarting treatment. You can schedule through MyChart or by calling the office.${CAL}`});
+  const worse = (deg,pct) => ({title:'Repeat DEXA in 2 years', note:`BMD ${deg} decreased (${pct}) since prior; ${why()}.`,
+    plan:`known osteoporosis, ${why()}; BMD ${deg} decreased (${pct}) vs prior; ${n?'treatment discussed since prior DEXA':'treatment discussed since prior DEXA, still recommended'}; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
+    msg: n ? `Your bone density test shows that your osteoporosis has worsened since your last scan. As discussed at a previous visit, osteoporosis medication is not a good option for you because of your other health conditions, so the steps below are especially important for protecting your bones. I recommend repeating this test in about 2 years.${CAL}`
+      : `Your bone density test shows that your osteoporosis has worsened since your last scan. As discussed at a previous visit, osteoporosis medication can lower your risk of a fracture, and treatment is still recommended. If you would like to start treatment or talk about your options, please schedule an appointment through MyChart or call the office. Otherwise, I recommend repeating this test in about 2 years.${CAL}`});
+  const O = {
+    fx_appt:{title:APPT, note:'Fragility fracture within 6 months (osteoporosis-after-fracture quality measure).',
+      plan:'fragility fracture within 6 months; appointment required to discuss treatment.', nurse:NURSE},
+    appt_os:{title:APPT, note:'Lowest T-score in the osteoporosis range.',
+      plan:'osteoporosis range; appointment required to discuss treatment.', nurse:NURSE},
+    appt_frax:{title:APPT, note:`10-year fracture risk at or above treatment threshold (${A.mof}% / ${A.hip}%).`,
+      plan:'above treatment threshold; appointment required to discuss treatment.', nurse:NURSE},
+    repeat:{title:`Repeat DEXA in ${iv.txt}`, note:`${iv.basis}. Below treatment threshold (${A.mof}% / ${A.hip}%).`,
+      plan:`below treatment threshold; recommend repeat DEXA in ${iv.txt} (due ~${dueBy(iv.lo)}).`,
+      msg:`Your bone density test results are back. ${A.t>-1.0?'Your bone density is in the normal range.':'Your bones are somewhat thinner than normal (osteopenia), but your estimated fracture risk is below the level where medication is recommended.'} I recommend repeating this test in about ${iv.txt}.${CAL}`},
+    os_appt:{title:'Appointment recommended', note:`Known osteoporosis, not on treatment, and treatment not discussed ${p?'since the prior DEXA':'in the past 2 years'}.`,
+      plan:`known osteoporosis, not on treatment; treatment not discussed ${p?'since prior DEXA':'in past 2 years'}; appointment recommended via MyChart.`,
+      msg:`Your bone density test results are back and continue to show osteoporosis, which means your bones are thinner than normal and more likely to break. Osteoporosis treatment can lower your risk of a fracture, so I recommend scheduling an appointment to talk about your options. You can schedule through MyChart or by calling the office.${CAL}`},
+    os_stable:{title:'Repeat DEXA in 2 years', note:`${p?'BMD stable compared with prior':'Prior DEXA not available for comparison'}; ${why()}.`,
+      plan:`known osteoporosis, ${why()}; ${p?'BMD stable vs prior; treatment discussed since prior DEXA':'prior DEXA not available for comparison; treatment discussed within past 2 years'}; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
+      msg:`${p?'Your bone density is stable compared with your last scan, which is good news.':'Your bone density test continues to show osteoporosis.'} Even so, osteoporosis means your bones are thinner than normal, and your risk of a fracture remains higher than average. ${n?'As discussed at a previous visit, osteoporosis medication is not a good option for you because of your other health conditions, so the steps below are especially important for protecting your bones.':'As discussed at a previous visit, osteoporosis medication can lower that risk, and I am happy to talk about it again at any time.'} I recommend repeating this test in about 2 years.${CAL}`},
+    os_mild:worse('mildly','3–5%'),
+    os_mod:worse('moderately','5–10%'),
+    os_severe:{title:'Appointment recommended', note:'BMD severely decreased (more than 10%) since prior.',
+      plan:`known osteoporosis, ${why()}; BMD severely decreased (>10%) vs prior; appointment recommended via MyChart.`,
+      msg: n ? `Your bone density test shows that your osteoporosis has worsened significantly since your last scan. I recommend scheduling an appointment to review this change and look at ways to protect your bones. You can schedule through MyChart or by calling the office.${CAL}`
+        : `Your bone density test shows that your osteoporosis has worsened significantly since your last scan. As discussed at a previous visit, treatment can lower your risk of a fracture, and with this change I strongly recommend scheduling an appointment to talk about your options. You can schedule through MyChart or by calling the office.${CAL}`},
+    tbd_ontx:{tbd:true, title:'Branch not yet defined', note:'Monitoring scan while on treatment. Still to be built. Clinician review.',
+      plan:'currently on osteoporosis treatment; [plan pending — branch not yet defined].'},
+    tbd_other:{tbd:true, title:'Branch not yet defined', note:'Drug holiday after raloxifene or another agent. Clinician review.',
+      plan:'completed treatment with other agent; [plan pending — branch not yet defined].'},
+    dmab:{title:APPT, note:'Prior denosumab. Stopping denosumab without follow-on therapy can cause rapid bone loss and multiple vertebral fractures.',
+      plan:'prior denosumab, not on follow-on therapy; appointment required to discuss transition treatment.',
+      nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with denosumab (Prolia), it is important that they schedule an appointment soon to discuss next steps in treatment. Stopping denosumab without a follow-up medication can lead to rapid bone loss and spine fractures.'},
+    anab:{title:APPT, note:'Prior anabolic agent. Should be followed by an antiresorptive to keep the bone gained.',
+      plan:'prior anabolic therapy, not on follow-on therapy; appointment required to discuss antiresorptive treatment.',
+      nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with a bone-building medication, it is important that they schedule an appointment to discuss starting a follow-up medication to keep the bone they gained.'},
+    hol_stable:{title:'Continue drug holiday; repeat DEXA in 2 years', note:`${p?'BMD stable compared with prior.':'Prior DEXA not available for comparison.'}${long?` Holiday is longer than typical for ${d.name} (about ${d.typ} years); consider reassessing at the next visit.`:''}`,
+      plan:`${holLine}; ${p?'BMD stable vs prior':'prior DEXA not available for comparison'}; continue holiday, recommend repeat DEXA in 2 years (due ~${dueBy(2)})${long?'; consider reassessing holiday at next visit':''}.`,
+      msg:`${p?'Your bone density is stable compared with your last scan, which is good news.':'Your bone density test results are back.'} It is reasonable to continue your break from ${d&&d.name} for now, and I recommend repeating this test in about 2 years.${CAL}`},
+    hol_mild:{title:'Continue drug holiday; repeat DEXA in 1 year', note:`BMD mildly decreased (3–5%) since prior.${long?` Holiday is longer than typical for ${d.name}.`:''}`,
+      plan:`${holLine}; BMD mildly decreased (3–5%) vs prior; continue holiday, recommend repeat DEXA in 1 year (due ~${dueBy(1)}).`,
+      msg:`Your bone density has dropped slightly since your last scan. It is reasonable to continue your break from ${d&&d.name} for now, but I would like to recheck it in about 1 year to make sure it is not continuing to drop. If you would like to talk about restarting treatment sooner, please schedule an appointment through MyChart or call the office.${CAL}`},
+    hol_mod:holDrop('moderately','5–10%','noticeably'),
+    hol_large:holDrop('severely','more than 10%','significantly'),
+    tbd_disc:{tbd:true, title:'Branch not yet defined', note:'Treatment already discussed at a recent visit. Outcome still to be decided. Clinician review.',
+      plan:'treatment discussed at recent visit; [plan pending — branch not yet defined].'},
+  };
+  return O[id];
+}
+
+const card = document.getElementById('card');
+
+function render(){
+  const id = stack[stack.length-1];
+  renderTrail();
+  if (id.startsWith('@')) return renderOutcome(id.slice(1));
+  const n = nodes[id], q = typeof n.q==='function'?n.q():n.q;
+  let h = `<div class="step">Step ${stack.length}</div><h2>${q}</h2>${n.hint?`<p class="hint">${n.hint}</p>`:''}`;
+  if (n.info) h += `<button type="button" class="link infobtn" id="b-info" aria-expanded="false" aria-controls="info">How to find this on the report</button><div class="info" id="info" hidden>${n.info}</div>`;
+  if (n.kind==='yn'){
+    h += `<div class="choices"><button class="choice" id="b-yes">Yes</button><button class="choice" id="b-no">No</button></div>`;
+  } else if (n.kind==='multi'){
+    h += `<div class="choices col">${n.opts.map((o,i)=>`<button class="choice" data-i="${i}"><span>${o[0]}</span><small>${o[1]}</small></button>`).join('')}</div>`;
+  } else if (n.kind==='txend'){
+    h += ymFields(A.txEnd);
+  } else if (n.kind==='pdate'){
+    h += ymFields(A.priorDate);
+  } else if (n.kind==='report'){
+    h += `<div class="row">
+      <div class="field"><label for="f-date">DEXA date</label><input type="date" id="f-date" value="${A.date||''}"></div>
+      <div class="field"><label for="f-t">Lowest T-score</label><input type="number" id="f-t" step="0.1" inputmode="decimal" placeholder="e.g. −1.8" value="${A.t??''}"></div></div>
+      <div class="field" role="group" aria-labelledby="site-lbl"><span class="lbl" id="site-lbl">Site of lowest T-score <span class="opt">(optional · tap again to clear)</span></span>
+      <div class="segs">${['femoral neck','total hip','L1–L4','forearm'].map(s=>`<button type="button" class="seg ${A.site===s?'on':''}" data-site="${s}" aria-pressed="${A.site===s}">${s}</button>`).join('')}</div></div>
+      <div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
+  } else if (n.kind==='frax'){
+    h += `<div class="row">
+      <div class="field"><label for="f-mof">Major osteoporotic fracture (%)</label><input type="number" id="f-mof" step="0.1" inputmode="decimal" value="${A.mof??''}"></div>
+      <div class="field"><label for="f-hip">Hip fracture (%)</label><input type="number" id="f-hip" step="0.1" inputmode="decimal" value="${A.hip??''}"></div></div>
+      <div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
+  }
+  h += `<div class="nav">${stack.length>1?'<button class="link" id="b-back">← Back</button>':'<span></span>'}${stack.length>1?'<button class="link" id="b-restart">Start over</button>':''}</div>`;
+  card.innerHTML = h;
+  bindNav();
+  const ib=document.getElementById('b-info'); if(ib) ib.onclick=()=>{ const p=document.getElementById('info'); p.hidden=!p.hidden; ib.setAttribute('aria-expanded',String(!p.hidden)); ib.textContent=p.hidden?'How to find this on the report':'Hide help'; };
+  if (n.kind==='yn'){
+    const go = v => { A[ynKeys[id]] = v; const nx = v?n.yes:n.no; push(typeof nx==='function'?nx():nx); };
+    document.getElementById('b-yes').onclick=()=>go(true);
+    document.getElementById('b-no').onclick=()=>go(false);
+  } else if (n.kind==='multi'){
+    card.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ const o=n.opts[+b.dataset.i]; A[id]=o[0]; push(typeof o[2]==='function'?o[2]():o[2]); });
+  } else {
+    const err = document.getElementById('err');
+    card.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>err.textContent=''));
+    const yold=document.getElementById('f-eyold'); if(yold) yold.onchange=()=>{ card.querySelectorAll('.yseg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); };
+    card.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{ if(yold){ yold.value=''; err.textContent=''; } const was=b.classList.contains('on'); card.querySelectorAll('.seg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); if(!was){b.classList.add('on');b.setAttribute('aria-pressed','true')} });
+    document.getElementById('b-next').onclick = () => {
+      if (n.kind==='txend'){
+        const [ey,em] = readYM();
+        if(!ey) return err.textContent='Choose the year of the last dose.'; if(!em) return err.textContent='Select the month of the last dose.';
+        const v=`${ey}-${String(em).padStart(2,'0')}`;
+        if(ey<1995||v>A.date.slice(0,7)) return err.textContent='The last dose must be before the current DEXA date.';
+        A.txEnd=v; push('priorAvail');
+      } else if (n.kind==='pdate'){
+        const [py,pm] = readYM();
+        if(!py) return err.textContent='Choose the year of the prior DEXA.'; if(!pm) return err.textContent='Select the month of the prior DEXA.';
+        const p=`${py}-${String(pm).padStart(2,'0')}`;
+        if(py<1990||p>=A.date.slice(0,7)) return err.textContent='The prior DEXA must be before the current DEXA.';
+        A.priorDate=p; push(hol()?'hbmd':'discSince');
+      } else if (n.kind==='report'){
+        const d=document.getElementById('f-date').value, t=parseFloat(document.getElementById('f-t').value);
+        if(!d) return err.textContent='Enter the DEXA date.';
+        if(isNaN(t)||t<-6||t>4) return err.textContent='Enter the lowest T-score as a number between −6 and 4.';
+        A.date=d; A.t=Math.round(t*10)/10; const on=card.querySelector('.seg.on'); A.site=on?on.dataset.site:''; push('fx');
+      } else {
+        const m=parseFloat(document.getElementById('f-mof').value), hp=parseFloat(document.getElementById('f-hip').value);
+        if(isNaN(m)||isNaN(hp)) return err.textContent='Enter both FRAX percentages.';
+        if(m<0||m>100||hp<0||hp>100) return err.textContent='FRAX values must be between 0 and 100.';
+        A.mof=m; A.hip=hp; push(m>=20||hp>=3?'priordx':'dm');
+      }
+    };
+  }
+  const first = card.querySelector('input,.choice'); if(first) first.focus({preventScroll:true});
+}
+
+function ymFields(val){
+  const [vy,vm] = (val||'').split('-').map(Number), dy = +A.date.slice(0,4);
+  const recent = Array.from({length:10},(_,i)=>dy-i), older = Array.from({length:Math.max(0,dy-10-1990+1)},(_,i)=>dy-10-i);
+  return `<div class="field" role="group" aria-labelledby="yr-lbl"><span class="lbl" id="yr-lbl">Year</span>
+    <div class="segs">${recent.map(y=>`<button type="button" class="seg yseg ${vy===y?'on':''}" data-y="${y}" aria-pressed="${vy===y}">${y}</button>`).join('')}</div>
+    <select id="f-eyold" aria-label="Earlier year"><option value="">Earlier year…</option>${older.map(y=>`<option ${vy===y?'selected':''}>${y}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-em">Month</label><select id="f-em"><option value="">Select</option>${MONTHS.map((mn,i)=>`<option value="${i+1}" ${vm===i+1?'selected':''}>${mn}</option>`).join('')}</select></div>
+    <div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
+}
+function readYM(){ const ys=card.querySelector('.yseg.on'); return [ys? +ys.dataset.y : +document.getElementById('f-eyold').value, +document.getElementById('f-em').value]; }
+
+function renderOutcome(id){
+  const o = outcome(id);
+  let h = `<div class="step">Result</div><div class="outcome ${o.tbd?'tbd':''}"><strong>${o.title}</strong><span>${o.note}</span></div>`;
+  if (!o.stop){
+    const now = new Date(), reviewed = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`;
+    const line = `${lineStart()} — ${o.plan} Reviewed ${reviewed}.`;
+    h += `<div class="out-block"><div class="out-head"><h3>Problem list</h3><button class="copy" data-for="pl">Copy</button></div><div class="box" id="pl">${line}</div></div>`;
+    if (o.nurse) h += `<div class="out-block"><div class="out-head"><h3>Nurse pool message</h3><button class="copy" data-for="np">Copy</button></div><div class="box msg" id="np">${o.nurse}</div></div>`;
+    if (o.msg) h += `<div class="out-block"><div class="out-head"><h3>MyChart message <span class="draft">· draft wording</span></h3><button class="copy" data-for="mc">Copy</button></div><div class="box msg" id="mc">${o.msg}</div></div>`;
+  }
+  h += `<div class="nav"><button class="link" id="b-back">← Back</button><button class="link" id="b-restart">Start over</button></div>`;
+  card.innerHTML = h; bindNav();
+  card.querySelectorAll('.copy').forEach(b=>b.onclick=()=>copy(b));
+}
+
+function copy(btn){
+  const el = document.getElementById(btn.dataset.for), text = el.textContent;
+  const ok = () => { btn.textContent='Copied'; btn.classList.add('done'); setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done')},1600); };
+  const fallback = () => { const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent='Press ⌘/Ctrl+C'; };
+  try { navigator.clipboard.writeText(text).then(ok, fallback); } catch(e){ fallback(); }
+}
+
+function renderTrail(){
+  const items = [];
+  if (A.date && stack.length>1) items.push(['DEXA date',fmtDate(A.date)],['Lowest T-score',fmtT(A.t)+(A.site?` (${A.site})`:'')]);
+  stack.slice(1,-1).forEach((id)=>{ const n=nodes[id]; if(n&&n.kind==='yn') items.push([n.label,yn(A[ynKeys[id]])]); if(id==='frax') items.push([A.tbs?'FRAX-TBS':'FRAX',`${A.mof}% / ${A.hip}%`]); if(id==='priorDate') items.push(['Prior DEXA',fmtMY(A.priorDate)]); if(id==='txEnd') items.push(['Last dose',fmtMY(A.txEnd)]); if(n&&n.kind==='multi') items.push([n.label,A[id]]); });
+  document.getElementById('trail').hidden = !items.length;
+  document.getElementById('trailList').innerHTML = items.map(([k,v])=>`<li><span>${k}</span><span>${v}</span></li>`).join('');
+}
+
+function bindNav(){
+  const b=document.getElementById('b-back'), r=document.getElementById('b-restart');
+  if(b) b.onclick=()=>{ const gone=stack.pop(); if(gone==='frax'){delete A.mof;delete A.hip;} render(); };
+  if(r) r.onclick=()=>{ for(const k in A) delete A[k]; stack=['report']; render(); };
+}
+function push(id){ stack.push(id); render(); }
+render();
+</script>
+</body>
+</html>
