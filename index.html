@@ -305,6 +305,13 @@ function ymFields(val){
 }
 function readYM(){ const ys=card.querySelector('.yseg.on'); return [ys? +ys.dataset.y : +document.getElementById('f-eyold').value, +document.getElementById('f-em').value]; }
 
+function withSeverity(msg){
+  if (A.t > -3.0) return msg;
+  const sev = `Your lowest bone density score (T-score ${fmtT(A.t)}) is in the more severe range of osteoporosis, which further raises your risk of a fracture. `;
+  const i = msg.indexOf('. ');
+  return i < 0 ? sev + msg : msg.slice(0, i+2) + sev + msg.slice(i+2);
+}
+
 function renderOutcome(id){
   const o = outcome(id);
   let h = `<div class="step">Result</div><div class="outcome ${o.tbd?'tbd':''}"><strong>${o.title}</strong><span>${o.note}</span></div>`;
@@ -313,7 +320,7 @@ function renderOutcome(id){
     const line = `${lineStart()} — ${o.plan} Reviewed ${reviewed}.`;
     h += `<div class="out-block"><div class="out-head"><h3>Problem list</h3><button class="copy" data-for="pl">Copy</button></div><div class="box" id="pl">${line}</div></div>`;
     if (o.nurse) h += `<div class="out-block"><div class="out-head"><h3>Nurse pool message</h3><button class="copy" data-for="np">Copy</button></div><div class="box msg" id="np">${o.nurse}</div></div>`;
-    if (o.msg) h += `<div class="out-block"><div class="out-head"><h3>MyChart message <span class="draft">· draft wording</span></h3><button class="copy" data-for="mc">Copy</button></div><div class="box msg" id="mc">${o.msg}</div></div>`;
+    if (o.msg) h += `<div class="out-block"><div class="out-head"><h3>MyChart message <span class="draft">· draft wording</span></h3><button class="copy" data-for="mc">Copy</button></div><div class="box msg" id="mc">${withSeverity(o.msg)}</div></div>`;
   }
   h += `<div class="nav"><button class="link" id="b-back">← Back</button><button class="link" id="b-restart">Start over</button></div>`;
   card.innerHTML = h; bindNav();
