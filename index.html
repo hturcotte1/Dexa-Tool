@@ -306,7 +306,7 @@ function ymFields(val){
 function readYM(){ const ys=card.querySelector('.yseg.on'); return [ys? +ys.dataset.y : +document.getElementById('f-eyold').value, +document.getElementById('f-em').value]; }
 
 function withSeverity(msg){
-  if (A.t > -3.0) return msg;
+  if (A.t > -3.0 || hol()) return msg;
   const sev = `Your lowest bone density score (T-score ${fmtT(A.t)}) is in the more severe range of osteoporosis, which further raises your risk of a fracture. `;
   const i = msg.indexOf('. ');
   return i < 0 ? sev + msg : msg.slice(0, i+2) + sev + msg.slice(i+2);
