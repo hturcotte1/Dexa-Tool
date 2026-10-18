@@ -4,7 +4,7 @@ A one-question-at-a-time decision aid for clinicians reviewing DEXA results from
 
 ## Technical summary
 
-- **One file:** `dexa-results-workflow.html`. Plain HTML, CSS, and vanilla JavaScript. No build step, no frameworks, no server, no database.
+- **One file:** `index.html`. Plain HTML, CSS, and vanilla JavaScript. No build step, no frameworks, no server, no database.
 - **External dependency:** Google Fonts only (Public Sans, IBM Plex Mono), with system-font fallbacks.
 - **No patient data:** nothing is stored or transmitted. All state lives in page memory and clears on reload.
 - **Hosting:** drop the file on any static host (intranet web server, GitHub Pages, Netlify, SharePoint page, etc.).
