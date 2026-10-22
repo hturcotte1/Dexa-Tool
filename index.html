@@ -107,6 +107,7 @@ const fmtT = t => (t<0?'−':'')+Math.abs(t).toFixed(1);
 const yn = v => v ? 'Yes' : 'No';
 const osteoRange = () => A.t <= -2.5;
 const pa = () => stack.includes('priorDate');
+const hxfx = () => stack.includes('everfx') && A.everfx;
 const nc = () => stack.includes('whyNo') && A.whyNo==='Not a candidate';
 const hol = () => stack.includes('txEnd');
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -119,8 +120,9 @@ const why = () => !stack.includes('whyNo') ? 'not on treatment' : nc() ? 'not on
 const nodes = {
   report:{kind:'report', q:'Enter the DEXA results', hint:'From the report header and summary table.'},
   dm:{kind:'yn', q:'Does the patient have diabetes?', hint:'Diabetes shortens the repeat DEXA interval (ADA).', label:'Diabetes', yes:'@repeat', no:'@repeat'},
-  fx:{kind:'yn', q:'Fragility fracture in the last 6 months?', hint:'Low-trauma fracture, such as a fall from standing height or less.', label:'Fragility fracture, last 6 mo', yes:'@fx_appt', no:()=>osteoRange()?'priordx':'tbs'},
-  priordx:{kind:'yn', q:'Prior diagnosis of osteoporosis?', label:'Prior osteoporosis diagnosis', yes:'osHxTx', no:()=>osteoRange()?'@appt_os':'@appt_frax'},
+  fx:{kind:'yn', q:'Fragility fracture in the last 6 months?', hint:'Low-trauma fracture, such as a fall from standing height or less.', label:'Fragility fracture, last 6 mo', yes:'@fx_appt', no:()=>osteoRange()?'priordx':'everfx'},
+  everfx:{kind:'yn', q:'Has the patient ever had a fragility fracture?', hint:'Low-trauma fracture of the hip, spine, wrist, upper arm, or pelvis in adulthood. A fragility fracture means osteoporosis even if the T-score is above −2.5.', label:'Prior fragility fracture', yes:'priordx', no:'tbs'},
+  priordx:{kind:'yn', q:'Prior diagnosis of osteoporosis?', label:'Prior osteoporosis diagnosis', yes:'osHxTx', no:()=>osteoRange()?'@appt_os':hxfx()?'@appt_hxfx':'@appt_frax'},
   osHxTx:{kind:'yn', q:'History of osteoporosis treatment?', label:'History of treatment', yes:'txDrug', no:'priorAvail'},
   txDrug:{kind:'multi', q:'Which medication did the patient complete?', hint:'This branch assumes the patient is on a drug holiday.', label:'Medication',
     opts:[['Alendronate','Oral, weekly','txEnd'],['Risedronate or ibandronate','Oral','txEnd'],['Zoledronic acid (IV)','Yearly infusion','txEnd'],['Anabolic agent','Teriparatide, abaloparatide, romosozumab','@anab']]},
@@ -138,7 +140,7 @@ const nodes = {
   tbs:{kind:'yn', q:'Was the scan done with TBS?', hint:'Trabecular bone score section on the report.', label:'Scan with TBS', yes:'frax', no:'frax'},
   frax:{kind:'frax', q:()=>A.tbs?'Enter the TBS-adjusted FRAX':'Enter the FRAX', hint:'10-year probabilities from the report.'},
 };
-const ynKeys = {dm:'dm',fx:'fx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
+const ynKeys = {dm:'dm',fx:'fx',everfx:'everfx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
 const CAL = `\n\nTo keep your bones strong, most adults over 50 need about 1,000 to 1,200 mg of calcium a day from food and supplements combined. If you don't get that much from your diet, a calcium supplement can make up the difference. I usually recommend calcium citrate, which is well absorbed and can be taken with or without food. Take no more than 500 to 600 mg at a time, and split larger amounts through the day.\n\nFor a list of calcium-rich foods and how much calcium they contain: https://ods.od.nih.gov/factsheets/Calcium-Consumer/\n\nRegular weight-bearing exercise, enough vitamin D, and preventing falls also help protect your bones.`;
 
 function interval(){
@@ -153,6 +155,7 @@ function dueBy(years){ const [y,m]=A.date.split('-'); return `${+m}/${+y+years}`
 function lineStart(){
   let s = `DEXA ${fmtDate(A.date)}, lowest T-score ${fmtT(A.t)}${A.site?` (${A.site})`:''}`;
   if (A.mof!=null) s += `, ${A.tbs?'FRAX-TBS':'FRAX'} ${A.mof}% MOF / ${A.hip}% hip`;
+  if (hxfx()) s += ', prior fragility fracture';
   if (stack.includes('priorDate')) s += `, vs prior DEXA ${fmtMY(A.priorDate)}`;
   return s;
 }
@@ -176,6 +179,8 @@ function outcome(id){
       plan:'fragility fracture within 6 months; appointment required to discuss treatment.', nurse:NURSE},
     appt_os:{title:APPT, note:'Lowest T-score in the osteoporosis range.',
       plan:'osteoporosis range; appointment required to discuss treatment.', nurse:NURSE},
+    appt_hxfx:{title:APPT, note:'Prior fragility fracture. This establishes osteoporosis even with a T-score above −2.5.',
+      plan:'osteoporosis based on fracture history; appointment required to discuss treatment.', nurse:NURSE},
     appt_frax:{title:APPT, note:`10-year fracture risk at or above treatment threshold (${A.mof}% / ${A.hip}%).`,
       plan:'above treatment threshold; appointment required to discuss treatment.', nurse:NURSE},
     repeat:{title:`Repeat DEXA in ${iv.txt}`, note:`${iv.basis}. Below treatment threshold (${A.mof}% / ${A.hip}%).`,
