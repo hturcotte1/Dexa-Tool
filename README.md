@@ -25,7 +25,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
 2. **Fragility fracture in the last 6 months?** Yes → *Appointment required* (nurse pool).
 3. **Lowest T-score ≤ −2.5?**
    - **Yes** → osteoporosis path (step 5).
-   - **No** → **Ever had a fragility fracture?** Yes → choose site(s): hip (right/left), spinal compression (lumbar/thoracic/both), distal radius (right/left), or other → osteoporosis path (step 5); No → step 4.
+   - **No** → **Ever had a fragility fracture?** Yes → choose site(s): hip (right/left), spinal compression (lumbar/thoracic/both), distal radius (right/left), or other → month/year of each fracture → osteoporosis path (step 5); No → step 4.
 4. **Scan with TBS?** Collect TBS-adjusted FRAX if yes, standard FRAX if no.
    - FRAX ≥ 20% major osteoporotic or ≥ 3% hip → osteoporosis path (step 5).
    - Below threshold → **Diabetes?** → *Repeat DEXA* at an interval set by `interval()`:

@@ -119,11 +119,14 @@ const FXT = [
   {k:'radius', label:'Distal radius (wrist)', subs:['Right','Left']},
   {k:'other', label:'Other site', note:'Upper arm, pelvis', subs:null},
 ];
-const fxDesc = (W=A.fxSites||{}) => FXT.filter(t=>t.k in W).map(t=>{ const v=W[t.k];
-  if (t.k==='hip') return `${v.toLowerCase()} hip`;
-  if (t.k==='spine') return v==='Both' ? 'thoracic and lumbar compression' : `${v.toLowerCase()} compression`;
-  if (t.k==='radius') return `${v.toLowerCase()} distal radius`;
-  return 'other site'; }).join(', ');
+const fxName = k => { const v=(A.fxSites||{})[k];
+  if (k==='hip') return `${v.toLowerCase()} hip`;
+  if (k==='spine') return v==='Both' ? 'thoracic and lumbar compression' : `${v.toLowerCase()} compression`;
+  if (k==='radius') return `${v.toLowerCase()} distal radius`;
+  return 'other site'; };
+const fxKeys = () => FXT.filter(t=>t.k in (A.fxSites||{})).map(t=>t.k);
+const curFx = () => fxKeys()[+stack[stack.length-1].split(':')[1]];
+const fxDesc = () => fxKeys().map(k=>{ const d=(A.fxDates||{})[k]; return d ? `${fxName(k)} ${fmtMY(d)}` : fxName(k); }).join(', ');
 const nc = () => stack.includes('whyNo') && A.whyNo==='Not a candidate';
 const hol = () => stack.includes('txEnd');
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -139,6 +142,7 @@ const nodes = {
   fx:{kind:'yn', q:'Fragility fracture in the last 6 months?', hint:'Low-trauma fracture, such as a fall from standing height or less.', label:'Fragility fracture, last 6 mo', yes:'@fx_appt', no:()=>osteoRange()?'priordx':'everfx'},
   everfx:{kind:'yn', q:'Has the patient ever had a fragility fracture?', hint:'Low-trauma fracture of the hip, spine, wrist, upper arm, or pelvis in adulthood. A fragility fracture means osteoporosis even if the T-score is above −2.5.', label:'Prior fragility fracture', yes:'fxsite', no:'tbs'},
   fxsite:{kind:'fxsites', q:'Where was the fracture?', hint:'Select all that apply.', label:'Fracture site'},
+  fxdate:{kind:'fxdate', q:()=>`When was the ${fxName(curFx())} fracture?`, hint:'Month and year are enough.'},
   priordx:{kind:'yn', q:'Prior diagnosis of osteoporosis?', label:'Prior osteoporosis diagnosis', yes:'osHxTx', no:()=>osteoRange()?'@appt_os':hxfx()?'@appt_hxfx':'@appt_frax'},
   osHxTx:{kind:'yn', q:'History of osteoporosis treatment?', label:'History of treatment', yes:'txDrug', no:'priorAvail'},
   txDrug:{kind:'multi', q:'Which medication did the patient complete?', hint:'This branch assumes the patient is on a drug holiday.', label:'Medication',
@@ -245,7 +249,7 @@ function render(){
   const id = stack[stack.length-1];
   renderTrail();
   if (id.startsWith('@')) return renderOutcome(id.slice(1));
-  const n = nodes[id], q = typeof n.q==='function'?n.q():n.q;
+  const n = nodes[id.split(':')[0]], q = typeof n.q==='function'?n.q():n.q;
   let h = `<div class="step">Step ${stack.length}</div><h2>${q}</h2>${n.hint?`<p class="hint">${n.hint}</p>`:''}`;
   if (n.info) h += `<button type="button" class="link infobtn" id="b-info" aria-expanded="false" aria-controls="info">How to find this on the report</button><div class="info" id="info" hidden>${n.info}</div>`;
   if (n.kind==='yn'){
@@ -254,6 +258,8 @@ function render(){
     h += `<div class="choices col">${n.opts.map((o,i)=>`<button class="choice" data-i="${i}"><span>${o[0]}</span><small>${o[1]}</small></button>`).join('')}</div>`;
   } else if (n.kind==='fxsites'){
     h += `<div class="fxlist" id="fxbox"></div><div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
+  } else if (n.kind==='fxdate'){
+    h += ymFields((A.fxDates||{})[curFx()]);
   } else if (n.kind==='txend'){
     h += ymFields(A.txEnd);
   } else if (n.kind==='pdate'){
@@ -291,7 +297,7 @@ function render(){
       if (!keys.length) return err.textContent='Select at least one fracture.';
       const miss = FXT.find(t=>t.k in W && W[t.k]==='');
       if (miss) return err.textContent = miss.k==='spine' ? 'Choose lumbar, thoracic, or both for the spinal fracture.' : `Choose right or left for the ${miss.label.toLowerCase()} fracture.`;
-      A.fxSites = W; push('priordx');
+      A.fxSites = W; A.fxDates = A.fxDates || {}; push('fxdate:0');
     };
   } else if (n.kind==='multi'){
     card.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ const o=n.opts[+b.dataset.i]; A[id]=o[0]; push(typeof o[2]==='function'?o[2]():o[2]); });
@@ -301,7 +307,14 @@ function render(){
     const yold=document.getElementById('f-eyold'); if(yold) yold.onchange=()=>{ card.querySelectorAll('.yseg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); };
     card.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{ if(yold){ yold.value=''; err.textContent=''; } const was=b.classList.contains('on'); card.querySelectorAll('.seg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); if(!was){b.classList.add('on');b.setAttribute('aria-pressed','true')} });
     document.getElementById('b-next').onclick = () => {
-      if (n.kind==='txend'){
+      if (n.kind==='fxdate'){
+        const [fy,fm] = readYM();
+        if(!fy) return err.textContent='Choose the year of the fracture.'; if(!fm) return err.textContent='Select the month of the fracture.';
+        const v=`${fy}-${String(fm).padStart(2,'0')}`;
+        if(v>A.date.slice(0,7)) return err.textContent='The fracture date must be before the current DEXA.';
+        A.fxDates[curFx()]=v; const i=+id.split(':')[1];
+        push(i+1<fxKeys().length ? `fxdate:${i+1}` : 'priordx');
+      } else if (n.kind==='txend'){
         const [ey,em] = readYM();
         if(!ey) return err.textContent='Choose the year of the last dose.'; if(!em) return err.textContent='Select the month of the last dose.';
         const v=`${ey}-${String(em).padStart(2,'0')}`;
