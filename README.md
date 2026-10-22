@@ -21,7 +21,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
 
 ## Decision logic
 
-1. **DEXA results:** scan date, lowest T-score, optional site (femoral neck, total hip, L1–L4, forearm).
+1. **DEXA results:** scan month/year (month buttons; year buttons for the current and prior year, dropdown for earlier), lowest T-score, optional site (femoral neck, total hip, L1–L4, forearm).
 2. **Fragility fracture in the last 6 months?** Yes → *Appointment required* (nurse pool).
 3. **Lowest T-score ≤ −2.5?**
    - **Yes** → osteoporosis path (step 5).
@@ -54,7 +54,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
 
 ## Outputs
 
-- **Problem-list line:** `DEXA [date], lowest T-score [x] ([site]), [FRAX or FRAX-TBS] [x]% MOF / [y]% hip, vs prior DEXA [m/yyyy] — [plan]. Reviewed [today].` Fields that don't apply are omitted. Repeat recommendations include a due month/year.
+- **Problem-list line:** `DEXA [month/year], lowest T-score [x] ([site]), [FRAX or FRAX-TBS] [x]% MOF / [y]% hip, vs prior DEXA [m/yyyy] — [plan]. Reviewed [today].` Fields that don't apply are omitted. Repeat recommendations include a due month/year.
 - **Nurse pool message** (appointment-required outcomes): call patient, osteoporosis on DEXA, schedule appointment, labs beforehand. Order BMP, PTH, 25-OH vitamin D, and CBC.
 - **MyChart message** (all other outcomes): first person, with calcium guidance (1,000–1,200 mg/day, calcium citrate if supplementing, ≤500–600 mg per dose) and a link to the NIH calcium fact sheet.
 
