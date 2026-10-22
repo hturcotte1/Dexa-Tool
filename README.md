@@ -21,7 +21,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
 
 ## Decision logic
 
-1. **DEXA results:** scan month/year (buttons for the current and prior year, dropdown for earlier), lowest T-score, optional site (femoral neck, total hip, L1–L4, forearm).
+1. **DEXA results:** scan month/year (month buttons; year buttons for the current and prior year, dropdown for earlier), lowest T-score, optional site (femoral neck, total hip, L1–L4, forearm).
 2. **Fragility fracture in the last 6 months?** Yes → *Appointment required* (nurse pool).
 3. **Lowest T-score ≤ −2.5?**
    - **Yes** → osteoporosis path (step 5).

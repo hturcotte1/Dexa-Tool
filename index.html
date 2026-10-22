@@ -309,26 +309,26 @@ function render(){
     document.getElementById('b-next').onclick = () => {
       if (n.kind==='fxdate'){
         const [fy,fm] = readYM();
-        if(!fy) return err.textContent='Choose the year of the fracture.'; if(!fm) return err.textContent='Select the month of the fracture.';
+        if(!fy) return err.textContent='Choose the year of the fracture.'; if(!fm) return err.textContent='Choose the month of the fracture.';
         const v=`${fy}-${String(fm).padStart(2,'0')}`;
         if(v>A.date.slice(0,7)) return err.textContent='The fracture date must be before the current DEXA.';
         A.fxDates[curFx()]=v; const i=+id.split(':')[1];
         push(i+1<fxKeys().length ? `fxdate:${i+1}` : 'priordx');
       } else if (n.kind==='txend'){
         const [ey,em] = readYM();
-        if(!ey) return err.textContent='Choose the year of the last dose.'; if(!em) return err.textContent='Select the month of the last dose.';
+        if(!ey) return err.textContent='Choose the year of the last dose.'; if(!em) return err.textContent='Choose the month of the last dose.';
         const v=`${ey}-${String(em).padStart(2,'0')}`;
         if(ey<1995||v>A.date.slice(0,7)) return err.textContent='The last dose must be before the current DEXA date.';
         A.txEnd=v; push('priorAvail');
       } else if (n.kind==='pdate'){
         const [py,pm] = readYM();
-        if(!py) return err.textContent='Choose the year of the prior DEXA.'; if(!pm) return err.textContent='Select the month of the prior DEXA.';
+        if(!py) return err.textContent='Choose the year of the prior DEXA.'; if(!pm) return err.textContent='Choose the month of the prior DEXA.';
         const p=`${py}-${String(pm).padStart(2,'0')}`;
         if(py<1990||p>=A.date.slice(0,7)) return err.textContent='The prior DEXA must be before the current DEXA.';
         A.priorDate=p; push(hol()?'hbmd':'discSince');
       } else if (n.kind==='report'){
         const [dy,dm]=readYM(), t=parseFloat(document.getElementById('f-t').value), now=new Date();
-        if(!dy) return err.textContent='Choose the year of the DEXA.'; if(!dm) return err.textContent='Select the month of the DEXA.';
+        if(!dy) return err.textContent='Choose the year of the DEXA.'; if(!dm) return err.textContent='Choose the month of the DEXA.';
         const d=`${dy}-${String(dm).padStart(2,'0')}`;
         if(d > `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`) return err.textContent='The DEXA date cannot be in the future.';
         if(isNaN(t)||t<-6||t>4) return err.textContent='Enter the lowest T-score as a number between −6 and 4.';
@@ -350,12 +350,13 @@ function ymCore(val, n, base, ylabel='Year', mlabel='Month'){
   return `<div class="field" role="group" aria-labelledby="yr-lbl"><span class="lbl" id="yr-lbl">${ylabel}</span>
     <div class="segs">${recent.map(y=>`<button type="button" class="seg yseg ${vy===y?'on':''}" data-y="${y}" aria-pressed="${vy===y}">${y}</button>`).join('')}</div>
     <select id="f-eyold" aria-label="Earlier year"><option value="">Earlier year…</option>${older.map(y=>`<option ${vy===y?'selected':''}>${y}</option>`).join('')}</select></div>
-    <div class="field"><label for="f-em">${mlabel}</label><select id="f-em"><option value="">Select</option>${MONTHS.map((mn,i)=>`<option value="${i+1}" ${vm===i+1?'selected':''}>${mn}</option>`).join('')}</select></div>`;
+    <div class="field" role="group" aria-labelledby="mo-lbl"><span class="lbl" id="mo-lbl">${mlabel}</span>
+    <div class="segs">${MONTHS.map((mn,i)=>`<button type="button" class="seg mseg ${vm===i+1?'on':''}" data-m="${i+1}" aria-pressed="${vm===i+1}">${mn}</button>`).join('')}</div></div>`;
 }
 function ymFields(val){
   return ymCore(val, 10, +A.date.slice(0,4)) + `<div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
 }
-function readYM(){ const ys=card.querySelector('.yseg.on'); return [ys? +ys.dataset.y : +document.getElementById('f-eyold').value, +document.getElementById('f-em').value]; }
+function readYM(){ const ys=card.querySelector('.yseg.on'); return [ys? +ys.dataset.y : +document.getElementById('f-eyold').value, (card.querySelector('.mseg.on')? +card.querySelector('.mseg.on').dataset.m : 0)]; }
 
 function withSeverity(msg){
   if (A.t > -3.0 || hol()) return msg;
