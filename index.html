@@ -174,7 +174,7 @@ function interval(){
 function dueBy(years){ const [y,m]=A.date.split('-'); return `${+m}/${+y+years}`; }
 
 function lineStart(){
-  let s = `DEXA ${fmtDate(A.date)}, lowest T-score ${fmtT(A.t)}${A.site?` (${A.site})`:''}`;
+  let s = `DEXA ${fmtMY(A.date)}, lowest T-score ${fmtT(A.t)}${A.site?` (${A.site})`:''}`;
   if (A.mof!=null) s += `, ${A.tbs?'FRAX-TBS':'FRAX'} ${A.mof}% MOF / ${A.hip}% hip`;
   if (hxfx()) s += `, prior fragility fracture${A.fxSites?` (${fxDesc()})`:''}`;
   if (stack.includes('priorDate')) s += `, vs prior DEXA ${fmtMY(A.priorDate)}`;
@@ -266,7 +266,7 @@ function render(){
     h += ymFields(A.priorDate);
   } else if (n.kind==='report'){
     h += `<div class="row">
-      <div class="field"><label for="f-date">DEXA date</label><input type="date" id="f-date" value="${A.date||''}"></div>
+      ${ymCore(A.date, 2, new Date().getFullYear(), 'DEXA year', 'DEXA month')}
       <div class="field"><label for="f-t">Lowest T-score</label><input type="number" id="f-t" step="0.1" inputmode="decimal" placeholder="e.g. −1.8" value="${A.t??''}"></div></div>
       <div class="field" role="group" aria-labelledby="site-lbl"><span class="lbl" id="site-lbl">Site of lowest T-score <span class="opt">(optional · tap again to clear)</span></span>
       <div class="segs">${['femoral neck','total hip','L1–L4','forearm'].map(s=>`<button type="button" class="seg ${A.site===s?'on':''}" data-site="${s}" aria-pressed="${A.site===s}">${s}</button>`).join('')}</div></div>
@@ -305,7 +305,7 @@ function render(){
     const err = document.getElementById('err');
     card.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>err.textContent=''));
     const yold=document.getElementById('f-eyold'); if(yold) yold.onchange=()=>{ card.querySelectorAll('.yseg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); };
-    card.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{ if(yold){ yold.value=''; err.textContent=''; } const was=b.classList.contains('on'); card.querySelectorAll('.seg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); if(!was){b.classList.add('on');b.setAttribute('aria-pressed','true')} });
+    card.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{ if(yold && b.classList.contains('yseg')){ yold.value=''; err.textContent=''; } const was=b.classList.contains('on'); b.parentElement.querySelectorAll('.seg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); if(!was){b.classList.add('on');b.setAttribute('aria-pressed','true')} });
     document.getElementById('b-next').onclick = () => {
       if (n.kind==='fxdate'){
         const [fy,fm] = readYM();
@@ -327,10 +327,12 @@ function render(){
         if(py<1990||p>=A.date.slice(0,7)) return err.textContent='The prior DEXA must be before the current DEXA.';
         A.priorDate=p; push(hol()?'hbmd':'discSince');
       } else if (n.kind==='report'){
-        const d=document.getElementById('f-date').value, t=parseFloat(document.getElementById('f-t').value);
-        if(!d) return err.textContent='Enter the DEXA date.';
+        const [dy,dm]=readYM(), t=parseFloat(document.getElementById('f-t').value), now=new Date();
+        if(!dy) return err.textContent='Choose the year of the DEXA.'; if(!dm) return err.textContent='Select the month of the DEXA.';
+        const d=`${dy}-${String(dm).padStart(2,'0')}`;
+        if(d > `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`) return err.textContent='The DEXA date cannot be in the future.';
         if(isNaN(t)||t<-6||t>4) return err.textContent='Enter the lowest T-score as a number between −6 and 4.';
-        A.date=d; A.t=Math.round(t*10)/10; const on=card.querySelector('.seg.on'); A.site=on?on.dataset.site:''; push('fx');
+        A.date=d; A.t=Math.round(t*10)/10; const on=card.querySelector('.seg.on[data-site]'); A.site=on?on.dataset.site:''; push('fx');
       } else {
         const m=parseFloat(document.getElementById('f-mof').value), hp=parseFloat(document.getElementById('f-hip').value);
         if(isNaN(m)||isNaN(hp)) return err.textContent='Enter both FRAX percentages.';
@@ -342,14 +344,16 @@ function render(){
   const first = card.querySelector('input,.choice'); if(first) first.focus({preventScroll:true});
 }
 
-function ymFields(val){
-  const [vy,vm] = (val||'').split('-').map(Number), dy = +A.date.slice(0,4);
-  const recent = Array.from({length:10},(_,i)=>dy-i), older = Array.from({length:Math.max(0,dy-10-1990+1)},(_,i)=>dy-10-i);
-  return `<div class="field" role="group" aria-labelledby="yr-lbl"><span class="lbl" id="yr-lbl">Year</span>
+function ymCore(val, n, base, ylabel='Year', mlabel='Month'){
+  const [vy,vm] = (val||'').split('-').map(Number);
+  const recent = Array.from({length:n},(_,i)=>base-i), older = Array.from({length:Math.max(0,base-n-1990+1)},(_,i)=>base-n-i);
+  return `<div class="field" role="group" aria-labelledby="yr-lbl"><span class="lbl" id="yr-lbl">${ylabel}</span>
     <div class="segs">${recent.map(y=>`<button type="button" class="seg yseg ${vy===y?'on':''}" data-y="${y}" aria-pressed="${vy===y}">${y}</button>`).join('')}</div>
     <select id="f-eyold" aria-label="Earlier year"><option value="">Earlier year…</option>${older.map(y=>`<option ${vy===y?'selected':''}>${y}</option>`).join('')}</select></div>
-    <div class="field"><label for="f-em">Month</label><select id="f-em"><option value="">Select</option>${MONTHS.map((mn,i)=>`<option value="${i+1}" ${vm===i+1?'selected':''}>${mn}</option>`).join('')}</select></div>
-    <div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
+    <div class="field"><label for="f-em">${mlabel}</label><select id="f-em"><option value="">Select</option>${MONTHS.map((mn,i)=>`<option value="${i+1}" ${vm===i+1?'selected':''}>${mn}</option>`).join('')}</select></div>`;
+}
+function ymFields(val){
+  return ymCore(val, 10, +A.date.slice(0,4)) + `<div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
 }
 function readYM(){ const ys=card.querySelector('.yseg.on'); return [ys? +ys.dataset.y : +document.getElementById('f-eyold').value, +document.getElementById('f-em').value]; }
 
@@ -384,7 +388,7 @@ function copy(btn){
 
 function renderTrail(){
   const items = [];
-  if (A.date && stack.length>1) items.push(['DEXA date',fmtDate(A.date)],['Lowest T-score',fmtT(A.t)+(A.site?` (${A.site})`:'')]);
+  if (A.date && stack.length>1) items.push(['DEXA date',fmtMY(A.date)],['Lowest T-score',fmtT(A.t)+(A.site?` (${A.site})`:'')]);
   stack.slice(1,-1).forEach((id)=>{ const n=nodes[id]; if(n&&n.kind==='yn') items.push([n.label,yn(A[ynKeys[id]])]); if(id==='frax') items.push([A.tbs?'FRAX-TBS':'FRAX',`${A.mof}% / ${A.hip}%`]); if(id==='priorDate') items.push(['Prior DEXA',fmtMY(A.priorDate)]); if(id==='txEnd') items.push(['Last dose',fmtMY(A.txEnd)]); if(id==='fxsite') items.push(['Fracture site',fxDesc()]); if(n&&n.kind==='multi') items.push([n.label,A[id]]); });
   document.getElementById('trail').hidden = !items.length;
   document.getElementById('trailList').innerHTML = items.map(([k,v])=>`<li><span>${k}</span><span>${v}</span></li>`).join('');
