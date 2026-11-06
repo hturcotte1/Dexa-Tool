@@ -50,6 +50,8 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
        - Moderate or large drop → *Appointment recommended* (MyChart) to discuss restarting
        - Flags "longer than typical" when the holiday exceeds ~5 yr (alendronate), ~2 yr (risedronate/ibandronate), or ~3 yr (zoledronic acid).
 
+**BMD note:** the comparison screen has an optional free-text box for mixed results; its text is appended to the problem-list line as "BMD note: ...".
+
 **BMD change rule:** use "Change vs. Previous %" at the summary sites only (L1–L4, total hip, femoral neck). Count only changes the report marks significant (exceeds the facility's least significant change). If there's no marker, require ≥ 3% at the spine or ≥ 5% at the hip. If the spine and hip disagree, go with the hip.
 
 ## Outputs
