@@ -77,6 +77,8 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);ou
 .trail li span:first-child{color:var(--muted);min-width:0}
 .trail li span:last-child{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
 .outcome{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:8px;background:var(--ok-soft);color:var(--ok)}
+.warnbox{padding:12px 16px;border-radius:8px;background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);font-size:15px}
+.warnbox strong{color:var(--warn)}
 .outcome.tbd{background:var(--warn-soft);color:var(--warn)}
 .outcome strong{font-size:17px}
 .outcome span{font-size:14px;color:var(--ink)}
@@ -259,9 +261,10 @@ function outcome(id){
     anab_zol:{title:`Follow-on zoledronic acid ${A.zolFU==='Received'?'given':'scheduled'}; repeat DEXA in 2 years`, note:`${anLine}. Zoledronic acid ${A.zolFU==='Received'?'given':'scheduled for'} ${A.zolDate?fmtDate(A.zolDate):''}.`,
       plan:`${anLine}; follow-on zoledronic acid ${A.zolFU==='Received'?'given':'scheduled'} ${A.zolDate?fmtDate(A.zolDate):''}; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
       msg:`Your bone density test results are back. You have completed your course of ${drugName()}, and ${A.zolFU==='Received'?`you received zoledronic acid (Reclast) on ${A.zolDate?fmtDate(A.zolDate):''}`:`your zoledronic acid (Reclast) infusion is scheduled for ${A.zolDate?fmtDate(A.zolDate):''}`}. This follow-up medication helps you keep the bone you gained. I recommend repeating this test in about 2 years.${CAL}`},
-    anab:{title:APPT, note:`${anLine}. Should be followed by an antiresorptive to keep the bone gained.`,
-      plan:`${anLine}, not on follow-on therapy; appointment required to discuss antiresorptive treatment.`,
-      nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with a bone-building medication, it is important that they schedule an appointment to discuss starting a follow-up medication to keep the bone they gained.'},
+    anab:{title:'Repeat DEXA in 2 years', note:`${anLine}. No follow-on zoledronic acid given or scheduled.`,
+      warn:'Follow-on treatment with Reclast is very important to ensure that gains in bone density are preserved. Contact patient if necessary.',
+      plan:`${anLine}; no follow-on zoledronic acid given or scheduled; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
+      msg:`Your bone density test results are back. You have completed your course of ${drugName()}. It is important to follow it with another medication, such as zoledronic acid (Reclast), to keep the bone you gained. If you have not started one yet, please contact the office so we can arrange it. I recommend repeating this test in about 2 years.${CAL}`},
     hol_stable:{title:'Continue drug holiday; repeat DEXA in 2 years', note:`${p?`BMD ${chg} compared with prior.`:'Prior DEXA not available for comparison.'}${long?` Holiday is longer than typical for ${d.name} (about ${d.typ} years); consider reassessing at the next visit.`:''}`,
       plan:`${holLine}; ${p?`BMD ${chg} vs prior`:'prior DEXA not available for comparison'}; continue holiday, recommend repeat DEXA in 2 years (due ~${dueBy(2)})${long?'; consider reassessing holiday at next visit':''}.`,
       msg:`${p?(imp?'Your bone density has improved compared with your last scan, which is good news.':'Your bone density is stable compared with your last scan, which is good news.'):'Your bone density test results are back.'} It is reasonable to continue your break from ${d&&d.name} for now, and I recommend repeating this test in about 2 years.${CAL}`},
@@ -410,6 +413,7 @@ function withSeverity(msg){
 function renderOutcome(id){
   const o = outcome(id);
   let h = `<div class="step">Result</div><div class="outcome ${o.tbd?'tbd':''}"><strong>${o.title}</strong><span>${o.note}</span></div>`;
+  if (o.warn) h += `<div class="warnbox"><strong>NOTE:</strong> ${o.warn}</div>`;
   if (!o.stop){
     const now = new Date(), reviewed = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`;
     const note = (stack.includes('bmd')||stack.includes('hbmd')||stack.includes('obmd')) && A.bmdNote ? ` BMD note: ${A.bmdNote.replace(/\.$/,'')}.` : '';
