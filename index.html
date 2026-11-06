@@ -130,9 +130,10 @@ const fxKeys = () => FXT.filter(t=>t.k in (A.fxSites||{})).map(t=>t.k);
 const curFx = () => fxKeys()[+stack[stack.length-1].split(':')[1]];
 const fxDesc = () => fxKeys().map(k=>{ const d=(A.fxDates||{})[k]; return d ? `${fxName(k)} ${fmtMY(d)}` : fxName(k); }).join(', ');
 const nc = () => stack.includes('whyNo') && A.whyNo==='Not a candidate';
-const hol = () => stack.includes('txEnd');
+const isAnab = () => A.txDrug==='Anabolic agent';
+const hol = () => stack.includes('txEnd') && !isAnab();
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DRUGS = {'Alendronate':{name:'alendronate',typ:5},'Risedronate or ibandronate':{name:'risedronate/ibandronate',typ:2},'Zoledronic acid (IV)':{name:'zoledronic acid',typ:3}};
+const DRUGS = {'Anabolic agent':{name:'anabolic therapy',typ:null},'Alendronate':{name:'alendronate',typ:5},'Risedronate or ibandronate':{name:'risedronate/ibandronate',typ:2},'Zoledronic acid (IV)':{name:'zoledronic acid',typ:3}};
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtMY = s => { const [y,m]=s.split('-'); return `${+m}/${y}`; };
 const holYears = () => { const [y,m]=A.date.split('-').map(Number), [ey,em]=A.txEnd.split('-').map(Number); return ((y*12+m)-(ey*12+em))/12; };
@@ -153,7 +154,9 @@ const nodes = {
   priordx:{kind:'yn', q:'Prior diagnosis of osteoporosis?', label:'Prior osteoporosis diagnosis', yes:'osHxTx', no:()=>osteoRange()?'@appt_os':hxfx()?'@appt_hxfx':'@appt_frax'},
   osHxTx:{kind:'yn', q:'History of osteoporosis treatment?', label:'History of treatment', yes:'txDrug', no:'priorAvail'},
   txDrug:{kind:'multi', q:'Which medication did the patient complete?', hint:'This branch assumes the patient is on a drug holiday.', label:'Medication',
-    opts:[['Alendronate','Oral, weekly','txEnd'],['Risedronate or ibandronate','Oral','txEnd'],['Zoledronic acid (IV)','Yearly infusion','txEnd'],['Anabolic agent','Teriparatide, abaloparatide, romosozumab','@anab']]},
+    opts:[['Alendronate','Oral, weekly','txEnd'],['Risedronate or ibandronate','Oral','txEnd'],['Zoledronic acid (IV)','Yearly infusion','txEnd'],['Anabolic agent','Teriparatide, abaloparatide, romosozumab','txEnd']]},
+  anDur:{kind:'multi', q:'How long was the patient on anabolic therapy?', hint:'Romosozumab is usually given for 12 months; teriparatide and abaloparatide for up to 24 months.', label:'Anabolic duration',
+    opts:[['Less than 12 months','','@anab'],['About 12 months','','@anab'],['12 to 24 months','','@anab'],['More than 24 months','','@anab']]},
   txEnd:{kind:'txend', q:()=>`When was the last dose of ${DRUGS[A.txDrug].name}?`, hint:'Month and year are enough.'},
   priorAvail:{kind:'yn', q:'Is the prior DEXA available for comparison?', hint:'Answer No if the prior scan was done at a different facility or on a different machine. Change can only be measured reliably on the same machine.', label:'Prior DEXA available', yes:'priorDate', no:()=>hol()?'@hol_stable':'disc2y'},
   priorDate:{kind:'pdate', q:'When was the prior DEXA?', hint:'Month and year are enough.'},
@@ -246,8 +249,8 @@ function outcome(id){
     dmab:{title:APPT, note:'Prior denosumab. Stopping denosumab without follow-on therapy can cause rapid bone loss and multiple vertebral fractures.',
       plan:'prior denosumab, not on follow-on therapy; appointment required to discuss transition treatment.',
       nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with denosumab (Prolia), it is important that they schedule an appointment soon to discuss next steps in treatment. Stopping denosumab without a follow-up medication can lead to rapid bone loss and spine fractures.'},
-    anab:{title:APPT, note:'Prior anabolic agent. Should be followed by an antiresorptive to keep the bone gained.',
-      plan:'prior anabolic therapy, not on follow-on therapy; appointment required to discuss antiresorptive treatment.',
+    anab:{title:APPT, note:`Prior anabolic agent${A.txEnd?` (last dose ${fmtMY(A.txEnd)}, ${(A.anDur||'').toLowerCase()})`:''}. Should be followed by an antiresorptive to keep the bone gained.`,
+      plan:`prior anabolic therapy${A.txEnd?` (last dose ${fmtMY(A.txEnd)}, treated ${(A.anDur||'').toLowerCase()})`:''}, not on follow-on therapy; appointment required to discuss antiresorptive treatment.`,
       nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with a bone-building medication, it is important that they schedule an appointment to discuss starting a follow-up medication to keep the bone they gained.'},
     hol_stable:{title:'Continue drug holiday; repeat DEXA in 2 years', note:`${p?`BMD ${chg} compared with prior.`:'Prior DEXA not available for comparison.'}${long?` Holiday is longer than typical for ${d.name} (about ${d.typ} years); consider reassessing at the next visit.`:''}`,
       plan:`${holLine}; ${p?`BMD ${chg} vs prior`:'prior DEXA not available for comparison'}; continue holiday, recommend repeat DEXA in 2 years (due ~${dueBy(2)})${long?'; consider reassessing holiday at next visit':''}.`,
@@ -340,7 +343,7 @@ function render(){
         if(!ey) return err.textContent='Choose the year of the last dose.'; if(!em) return err.textContent='Choose the month of the last dose.';
         const v=`${ey}-${String(em).padStart(2,'0')}`;
         if(ey<1995||v>A.date.slice(0,7)) return err.textContent='The last dose must be before the current DEXA date.';
-        A.txEnd=v; push('priorAvail');
+        A.txEnd=v; push(isAnab()?'anDur':'priorAvail');
       } else if (n.kind==='pdate'){
         const [py,pm] = readYM();
         if(!py) return err.textContent='Choose the year of the prior DEXA.'; if(!pm) return err.textContent='Choose the month of the prior DEXA.';
