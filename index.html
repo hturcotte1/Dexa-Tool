@@ -134,7 +134,7 @@ const fxDesc = () => fxKeys().map(k=>{ const d=(A.fxDates||{})[k]; return d ? `$
 const nc = () => stack.includes('whyNo') && A.whyNo==='Not a candidate';
 const isAnab = () => A.txDrug==='Anabolic agent';
 const anTarget = () => A.zolFU==='Neither' ? '@anab' : '@anab_zol';
-const drugName = () => isAnab() ? (A.anWhich||'anabolic therapy').toLowerCase() : DRUGS[A.txDrug].name;
+const drugName = () => isAnab() ? (A.anWhich||'anabolic therapy').toLowerCase() : (DRUGS[A.txDrug]||{name:'treatment'}).name;
 const hol = () => stack.includes('txEnd') && !isAnab();
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DRUGS = {'Anabolic agent':{name:'anabolic therapy',typ:null},'Alendronate':{name:'alendronate',typ:5},'Risedronate or ibandronate':{name:'risedronate/ibandronate',typ:2},'Zoledronic acid (IV)':{name:'zoledronic acid',typ:3}};
