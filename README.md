@@ -44,7 +44,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
        - Large drop (>10%) → *Appointment recommended* (MyChart)
        - "Not a candidate" messages omit the push toward medication.
    - **Yes (assumed drug holiday):** medication completed:
-     - Anabolic agent → which (teriparatide / abaloparatide / romosozumab) → last dose month/year → **Completed two years (romosozumab: full 12-month course)?** No → how long treated + why stopped → **Zoledronic acid (Reclast) received or scheduled?** Received/Scheduled → exact date → follow-on noted, repeat DEXA 2 yr (MyChart). Neither → repeat DEXA 2 yr (MyChart) with an on-screen NOTE that follow-on Reclast is very important; contact patient if necessary.
+     - Anabolic agent → which (teriparatide / abaloparatide / romosozumab) → last dose month/year → **Completed two years (romosozumab: full 12-month course)?** No → how long treated + why stopped → **Zoledronic acid (Reclast) received or scheduled?** (Received/Scheduled → exact date) → **prior DEXA available?** → comparison (recorded, does not change the plan) → follow-on noted, repeat DEXA 2 yr (MyChart). Neither → repeat DEXA 2 yr (MyChart) with an on-screen NOTE that follow-on Reclast is very important; contact patient if necessary.
      - Alendronate, risedronate/ibandronate, or zoledronic acid → last dose month/year → prior DEXA available? → BMD change (unavailable = stable):
        - Improved or no real change → continue holiday, repeat 2 yr
        - Mild drop → continue holiday, repeat 1 yr
