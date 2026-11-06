@@ -28,6 +28,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
    - **No** → **Ever had a fragility fracture?** Yes → choose site(s): hip (right/left), spinal compression (lumbar/thoracic/both), distal radius (right/left), or other → month/year of each fracture → osteoporosis path (step 5); No → step 4.
 4. **Scan with TBS?** Collect TBS-adjusted FRAX if yes, standard FRAX if no.
    - FRAX ≥ 20% major osteoporotic or ≥ 3% hip → osteoporosis path (step 5).
+   - Below threshold with osteopenia (T ≤ −1.0) → **Is there a prior DEXA available for comparison?** Yes → prior month/year → BMD change: improved / no real change / mild drop → usual interval; moderate drop → repeat in 1–2 yr; large drop (>10%) → *Appointment recommended* (MyChart). Then:
    - Below threshold → **Diabetes?** → *Repeat DEXA* at an interval set by `interval()`:
      - Diabetes: 2–3 years, or 1–2 years if T ≤ −2.0 (ADA Standards of Care).
      - No diabetes, by lowest T-score: > −1.0 → 10 yr; −1.0 to −1.49 → 7–10 yr; −1.5 to −1.99 → 3–5 yr; −2.0 to −2.49 → 1–2 yr.
@@ -37,7 +38,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
      - Prior DEXA available (same facility/machine)? Yes → prior month/year → "Treatment discussed since prior DEXA?" No → "Discussed in the past 2 years?"
      - Not discussed → *Appointment recommended* (MyChart).
      - Discussed → reason not treated (patient preference / not a candidate due to comorbidity) → BMD change (if prior available; otherwise treated as stable):
-       - No real change → repeat DEXA 2 yr
+       - Improved or no real change → repeat DEXA 2 yr
        - Mild drop (3–5%) → repeat DEXA 2 yr, "worsened" message
        - Moderate drop (5–10%) → repeat DEXA 2 yr, "worsened" message
        - Large drop (>10%) → *Appointment recommended* (MyChart)
@@ -45,10 +46,12 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
    - **Yes (assumed drug holiday):** medication completed:
      - Anabolic agent → *Appointment required* (nurse pool) for follow-on antiresorptive.
      - Alendronate, risedronate/ibandronate, or zoledronic acid → last dose month/year → prior DEXA available? → BMD change (unavailable = stable):
-       - No real change → continue holiday, repeat 2 yr
+       - Improved or no real change → continue holiday, repeat 2 yr
        - Mild drop → continue holiday, repeat 1 yr
        - Moderate or large drop → *Appointment recommended* (MyChart) to discuss restarting
        - Flags "longer than typical" when the holiday exceeds ~5 yr (alendronate), ~2 yr (risedronate/ibandronate), or ~3 yr (zoledronic acid).
+
+**BMD note:** the comparison screen has an optional free-text box for mixed results; its text is appended to the problem-list line as "BMD note: ...".
 
 **BMD change rule:** use "Change vs. Previous %" at the summary sites only (L1–L4, total hip, femoral neck). Count only changes the report marks significant (exceeds the facility's least significant change). If there's no marker, require ≥ 3% at the spine or ≥ 5% at the hip. If the spine and hip disagree, go with the hip.
 
