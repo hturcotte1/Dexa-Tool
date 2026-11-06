@@ -163,8 +163,11 @@ const nodes = {
   zolFU:{kind:'multi', q:'Has the patient received or been scheduled for zoledronic acid (Reclast)?', hint:'Follow-on antiresorptive therapy after the anabolic course.', label:'Follow-on zoledronic acid',
     opts:[['Received','Infusion already given','zolDate'],['Scheduled','Infusion date set','zolDate'],['Neither','Not given or scheduled','@anab']]},
   zolDate:{kind:'fulldate', q:()=>A.zolFU==='Received'?'When was the zoledronic acid given?':'When is the zoledronic acid scheduled?'},
-  anDur:{kind:'multi', q:()=>`How long was the patient on ${drugName()}?`, hint:'Romosozumab is usually given for 12 months; teriparatide and abaloparatide for up to 24 months.', label:'Anabolic duration',
-    opts:[['Less than 12 months','','zolFU'],['About 12 months','','zolFU'],['12 to 24 months','','zolFU'],['More than 24 months','','zolFU']]},
+  anFull:{kind:'yn', q:()=> A.anWhich==='Romosozumab' ? 'Did the patient complete the full 12-month course?' : 'Did the patient complete two years of treatment?', label:'Completed full course', yes:'zolFU', no:'anDur'},
+  anDur:{kind:'multi', q:()=>`How long was the patient on ${drugName()}?`, label:'Treated for',
+    opts:[['Less than 6 months','','anWhy'],['6 to 12 months','','anWhy'],['12 to 24 months','','anWhy']]},
+  anWhy:{kind:'multi', q:'Why was it stopped?', label:'Reason stopped',
+    opts:[['Side effects','','zolFU'],['Cost or insurance','','zolFU'],['Patient preference','','zolFU'],['Other','','zolFU']]},
   txEnd:{kind:'txend', q:()=>`When was the last dose of ${drugName()}?`, hint:'Month and year are enough.'},
   priorAvail:{kind:'yn', q:'Is the prior DEXA available for comparison?', hint:'Answer No if the prior scan was done at a different facility or on a different machine. Change can only be measured reliably on the same machine.', label:'Prior DEXA available', yes:'priorDate', no:()=>hol()?'@hol_stable':'disc2y'},
   priorDate:{kind:'pdate', q:'When was the prior DEXA?', hint:'Month and year are enough.'},
@@ -179,7 +182,7 @@ const nodes = {
   tbs:{kind:'yn', q:'Was the scan done with TBS?', hint:'Trabecular bone score section on the report.', label:'Scan with TBS', yes:'frax', no:'frax'},
   frax:{kind:'frax', q:()=>A.tbs?'Enter the TBS-adjusted FRAX':'Enter the FRAX', hint:'10-year probabilities from the report.'},
 };
-const ynKeys = {dm:'dm',fx:'fx',everfx:'everfx',pxTx:'hxtx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
+const ynKeys = {anFull:'anFull',dm:'dm',fx:'fx',everfx:'everfx',pxTx:'hxtx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
 const CAL = `\n\nTo keep your bones strong, most adults over 50 need about 1,000 to 1,200 mg of calcium a day from food and supplements combined. If you don't get that much from your diet, a calcium supplement can make up the difference. I usually recommend calcium citrate, which is well absorbed and can be taken with or without food. Take no more than 500 to 600 mg at a time, and split larger amounts through the day.\n\nFor a list of calcium-rich foods and how much calcium they contain: https://ods.od.nih.gov/factsheets/Calcium-Consumer/\n\nRegular weight-bearing exercise, enough vitamin D, and preventing falls also help protect your bones.`;
 
 function interval(){
@@ -209,7 +212,8 @@ function outcome(id){
   const NURSE = 'Please call patient and let them know that their bone density test shows osteoporosis and it is important that they schedule an appointment to discuss treatment options. Prior to the appointment, they should come to the lab for some additional lab testing. Please order BMP, PTH, 25-OH vitamin D, and CBC for diagnosis of osteoporosis.';
   const APPT = 'Appointment required to discuss treatment';
   const p = pa(), n = nc();
-  const anLine = `prior ${A.anWhich?A.anWhich.toLowerCase():'anabolic therapy'}${A.txEnd?` (last dose ${fmtMY(A.txEnd)}, treated ${(A.anDur||'').toLowerCase()})`:''}`;
+  const anCourse = !stack.includes('anFull') ? '' : A.anFull ? `completed full ${A.anWhich==='Romosozumab'?'12-month':'24-month'} course` : `treated ${(A.anDur||'').toLowerCase()}, stopped due to ${(A.anWhy||'').toLowerCase()}`;
+  const anLine = `prior ${A.anWhich?A.anWhich.toLowerCase():'anabolic therapy'}${A.txEnd?` (last dose ${fmtMY(A.txEnd)}${anCourse?', '+anCourse:''})`:''}`;
   const oc = stack.includes('obmd');
   const OPDESC = {'Improved':'improved','No real change':'stable','Mild drop':'mildly decreased (3–5%)','Moderate drop':'moderately decreased (5–10%)'};
   const OPMSG = {'Improved':'Your bone density has improved since your last scan, which is good news.','No real change':'Your bone density is stable compared with your last scan.','Mild drop':'Your bone density has dropped slightly since your last scan.','Moderate drop':'Your bone density has dropped since your last scan, so I would like to recheck it a little sooner.'};
@@ -364,7 +368,7 @@ function render(){
         if(!ey) return err.textContent='Choose the year of the last dose.'; if(!em) return err.textContent='Choose the month of the last dose.';
         const v=`${ey}-${String(em).padStart(2,'0')}`;
         if(ey<1995||v>A.date.slice(0,7)) return err.textContent='The last dose must be before the current DEXA date.';
-        A.txEnd=v; push(isAnab()?'anDur':'priorAvail');
+        A.txEnd=v; push(isAnab()?'anFull':'priorAvail');
       } else if (n.kind==='pdate'){
         const [py,pm] = readYM();
         if(!py) return err.textContent='Choose the year of the prior DEXA.'; if(!pm) return err.textContent='Choose the month of the prior DEXA.';
