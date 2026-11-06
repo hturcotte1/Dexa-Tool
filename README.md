@@ -38,15 +38,15 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
      - Prior DEXA available (same facility/machine)? Yes → prior month/year → "Treatment discussed since prior DEXA?" No → "Discussed in the past 2 years?"
      - Not discussed → *Appointment recommended* (MyChart).
      - Discussed → reason not treated (patient preference / not a candidate due to comorbidity) → BMD change (if prior available; otherwise treated as stable):
-       - Improved or no real change → repeat DEXA 2 yr
+       - Improvement (mild 3–5% / moderate 5–10% / large >10%) or no real change → repeat DEXA 2 yr
        - Mild drop (3–5%) → repeat DEXA 2 yr, "worsened" message
        - Moderate drop (5–10%) → repeat DEXA 2 yr, "worsened" message
        - Large drop (>10%) → *Appointment recommended* (MyChart)
        - "Not a candidate" messages omit the push toward medication.
    - **Yes (assumed drug holiday):** medication completed:
-     - Anabolic agent → which (teriparatide / abaloparatide / romosozumab) → last dose month/year → **Completed two years (romosozumab: full 12-month course)?** No → how long treated + why stopped → **Zoledronic acid (Reclast) received or scheduled?** (Received/Scheduled → exact date) → **prior DEXA available?** → comparison (recorded, does not change the plan) → follow-on noted, repeat DEXA 2 yr (MyChart). Neither → repeat DEXA 2 yr (MyChart) with an on-screen NOTE that follow-on Reclast is very important; contact patient if necessary.
+     - Anabolic agent → which (teriparatide / abaloparatide / romosozumab) → last dose month/year → **Completed two years (romosozumab: full 12-month course)?** No → how long treated + why stopped → **Zoledronic acid (Reclast) received or scheduled?** (Received/Scheduled → exact date) → **prior DEXA available?** → comparison incl. improvement level (recorded, does not change the plan) → follow-on noted, repeat DEXA 2 yr (MyChart). Neither → repeat DEXA 2 yr (MyChart) with an on-screen NOTE that follow-on Reclast is very important; contact patient if necessary.
      - Alendronate, risedronate/ibandronate, or zoledronic acid → last dose month/year → prior DEXA available? → BMD change (unavailable = stable):
-       - Improved or no real change → continue holiday, repeat 2 yr
+       - Improvement (mild 3–5% / moderate 5–10% / large >10%) or no real change → continue holiday, repeat 2 yr
        - Mild drop → continue holiday, repeat 1 yr
        - Moderate or large drop → *Appointment recommended* (MyChart) to discuss restarting
        - Flags "longer than typical" when the holiday exceeds ~5 yr (alendronate), ~2 yr (risedronate/ibandronate), or ~3 yr (zoledronic acid).
