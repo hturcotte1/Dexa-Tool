@@ -25,7 +25,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
 2. **Fragility fracture in the last 6 months?** Yes → *Appointment required* (nurse pool).
 3. **Lowest T-score ≤ −2.5?**
    - **Yes** → osteoporosis path (step 5).
-   - **No** → **Ever had a fragility fracture?** Yes → choose site(s): hip (right/left), spinal compression (lumbar/thoracic/both), distal radius (right/left), or other → month/year of each fracture → osteoporosis path (step 5); No → step 4.
+   - **No** → **Ever had a fragility fracture?** Yes → choose site(s): hip (right/left), spinal compression (lumbar/thoracic/both), distal radius (right/left), or other → month/year of each fracture → osteoporosis path (step 5); No → **History of osteoporosis treatment?** Yes → drug-holiday branch (step 6, Yes), skipping FRAX; No → step 4.
 4. **Scan with TBS?** Collect TBS-adjusted FRAX if yes, standard FRAX if no.
    - FRAX ≥ 20% major osteoporotic or ≥ 3% hip → osteoporosis path (step 5).
    - Below threshold with osteopenia (T ≤ −1.0) → **Is there a prior DEXA available for comparison?** Yes → prior month/year → BMD change: improved / no real change / mild drop → usual interval; moderate drop → repeat in 1–2 yr; large drop (>10%) → *Appointment recommended* (MyChart). Then:
@@ -44,7 +44,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
        - Large drop (>10%) → *Appointment recommended* (MyChart)
        - "Not a candidate" messages omit the push toward medication.
    - **Yes (assumed drug holiday):** medication completed:
-     - Anabolic agent → *Appointment required* (nurse pool) for follow-on antiresorptive.
+     - Anabolic agent → which (teriparatide / abaloparatide / romosozumab) → last dose month/year → **Completed two years (romosozumab: full 12-month course)?** No → how long treated + why stopped → **Zoledronic acid (Reclast) received or scheduled?** Received/Scheduled → exact date → follow-on noted, repeat DEXA 2 yr (MyChart). Neither → repeat DEXA 2 yr (MyChart) with an on-screen NOTE that follow-on Reclast is very important; contact patient if necessary.
      - Alendronate, risedronate/ibandronate, or zoledronic acid → last dose month/year → prior DEXA available? → BMD change (unavailable = stable):
        - Improved or no real change → continue holiday, repeat 2 yr
        - Mild drop → continue holiday, repeat 1 yr
