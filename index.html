@@ -131,6 +131,7 @@ const curFx = () => fxKeys()[+stack[stack.length-1].split(':')[1]];
 const fxDesc = () => fxKeys().map(k=>{ const d=(A.fxDates||{})[k]; return d ? `${fxName(k)} ${fmtMY(d)}` : fxName(k); }).join(', ');
 const nc = () => stack.includes('whyNo') && A.whyNo==='Not a candidate';
 const isAnab = () => A.txDrug==='Anabolic agent';
+const drugName = () => isAnab() ? (A.anWhich||'anabolic therapy').toLowerCase() : DRUGS[A.txDrug].name;
 const hol = () => stack.includes('txEnd') && !isAnab();
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DRUGS = {'Anabolic agent':{name:'anabolic therapy',typ:null},'Alendronate':{name:'alendronate',typ:5},'Risedronate or ibandronate':{name:'risedronate/ibandronate',typ:2},'Zoledronic acid (IV)':{name:'zoledronic acid',typ:3}};
@@ -154,10 +155,15 @@ const nodes = {
   priordx:{kind:'yn', q:'Prior diagnosis of osteoporosis?', label:'Prior osteoporosis diagnosis', yes:'osHxTx', no:()=>osteoRange()?'@appt_os':hxfx()?'@appt_hxfx':'@appt_frax'},
   osHxTx:{kind:'yn', q:'History of osteoporosis treatment?', label:'History of treatment', yes:'txDrug', no:'priorAvail'},
   txDrug:{kind:'multi', q:'Which medication did the patient complete?', hint:'This branch assumes the patient is on a drug holiday.', label:'Medication',
-    opts:[['Alendronate','Oral, weekly','txEnd'],['Risedronate or ibandronate','Oral','txEnd'],['Zoledronic acid (IV)','Yearly infusion','txEnd'],['Anabolic agent','Teriparatide, abaloparatide, romosozumab','txEnd']]},
-  anDur:{kind:'multi', q:'How long was the patient on anabolic therapy?', hint:'Romosozumab is usually given for 12 months; teriparatide and abaloparatide for up to 24 months.', label:'Anabolic duration',
-    opts:[['Less than 12 months','','@anab'],['About 12 months','','@anab'],['12 to 24 months','','@anab'],['More than 24 months','','@anab']]},
-  txEnd:{kind:'txend', q:()=>`When was the last dose of ${DRUGS[A.txDrug].name}?`, hint:'Month and year are enough.'},
+    opts:[['Alendronate','Oral, weekly','txEnd'],['Risedronate or ibandronate','Oral','txEnd'],['Zoledronic acid (IV)','Yearly infusion','txEnd'],['Anabolic agent','Teriparatide, abaloparatide, romosozumab','anWhich']]},
+  anWhich:{kind:'multi', q:'Which anabolic agent?', label:'Anabolic agent',
+    opts:[['Teriparatide','Forteo, generic','txEnd'],['Abaloparatide','Tymlos','txEnd'],['Romosozumab','Evenity','txEnd']]},
+  zolFU:{kind:'multi', q:'Has the patient received or been scheduled for zoledronic acid (Reclast)?', hint:'Follow-on antiresorptive therapy after the anabolic course.', label:'Follow-on zoledronic acid',
+    opts:[['Received','Infusion already given','zolDate'],['Scheduled','Infusion date set','zolDate'],['Neither','Not given or scheduled','@anab']]},
+  zolDate:{kind:'fulldate', q:()=>A.zolFU==='Received'?'When was the zoledronic acid given?':'When is the zoledronic acid scheduled?'},
+  anDur:{kind:'multi', q:()=>`How long was the patient on ${drugName()}?`, hint:'Romosozumab is usually given for 12 months; teriparatide and abaloparatide for up to 24 months.', label:'Anabolic duration',
+    opts:[['Less than 12 months','','zolFU'],['About 12 months','','zolFU'],['12 to 24 months','','zolFU'],['More than 24 months','','zolFU']]},
+  txEnd:{kind:'txend', q:()=>`When was the last dose of ${drugName()}?`, hint:'Month and year are enough.'},
   priorAvail:{kind:'yn', q:'Is the prior DEXA available for comparison?', hint:'Answer No if the prior scan was done at a different facility or on a different machine. Change can only be measured reliably on the same machine.', label:'Prior DEXA available', yes:'priorDate', no:()=>hol()?'@hol_stable':'disc2y'},
   priorDate:{kind:'pdate', q:'When was the prior DEXA?', hint:'Month and year are enough.'},
   discSince:{kind:'yn', q:()=>`Has osteoporosis treatment been discussed since the prior DEXA (${fmtMY(A.priorDate)})?`, label:'Treatment discussed since prior', yes:'whyNo', no:'@os_appt'},
@@ -201,6 +207,7 @@ function outcome(id){
   const NURSE = 'Please call patient and let them know that their bone density test shows osteoporosis and it is important that they schedule an appointment to discuss treatment options. Prior to the appointment, they should come to the lab for some additional lab testing. Please order BMP, PTH, 25-OH vitamin D, and CBC for diagnosis of osteoporosis.';
   const APPT = 'Appointment required to discuss treatment';
   const p = pa(), n = nc();
+  const anLine = `prior ${A.anWhich?A.anWhich.toLowerCase():'anabolic therapy'}${A.txEnd?` (last dose ${fmtMY(A.txEnd)}, treated ${(A.anDur||'').toLowerCase()})`:''}`;
   const oc = stack.includes('obmd');
   const OPDESC = {'Improved':'improved','No real change':'stable','Mild drop':'mildly decreased (3–5%)','Moderate drop':'moderately decreased (5–10%)'};
   const OPMSG = {'Improved':'Your bone density has improved since your last scan, which is good news.','No real change':'Your bone density is stable compared with your last scan.','Mild drop':'Your bone density has dropped slightly since your last scan.','Moderate drop':'Your bone density has dropped since your last scan, so I would like to recheck it a little sooner.'};
@@ -249,8 +256,11 @@ function outcome(id){
     dmab:{title:APPT, note:'Prior denosumab. Stopping denosumab without follow-on therapy can cause rapid bone loss and multiple vertebral fractures.',
       plan:'prior denosumab, not on follow-on therapy; appointment required to discuss transition treatment.',
       nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with denosumab (Prolia), it is important that they schedule an appointment soon to discuss next steps in treatment. Stopping denosumab without a follow-up medication can lead to rapid bone loss and spine fractures.'},
-    anab:{title:APPT, note:`Prior anabolic agent${A.txEnd?` (last dose ${fmtMY(A.txEnd)}, ${(A.anDur||'').toLowerCase()})`:''}. Should be followed by an antiresorptive to keep the bone gained.`,
-      plan:`prior anabolic therapy${A.txEnd?` (last dose ${fmtMY(A.txEnd)}, treated ${(A.anDur||'').toLowerCase()})`:''}, not on follow-on therapy; appointment required to discuss antiresorptive treatment.`,
+    anab_zol:{title:`Follow-on zoledronic acid ${A.zolFU==='Received'?'given':'scheduled'}; repeat DEXA in 2 years`, note:`${anLine}. Zoledronic acid ${A.zolFU==='Received'?'given':'scheduled for'} ${A.zolDate?fmtDate(A.zolDate):''}.`,
+      plan:`${anLine}; follow-on zoledronic acid ${A.zolFU==='Received'?'given':'scheduled'} ${A.zolDate?fmtDate(A.zolDate):''}; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
+      msg:`Your bone density test results are back. You have completed your course of ${drugName()}, and ${A.zolFU==='Received'?`you received zoledronic acid (Reclast) on ${A.zolDate?fmtDate(A.zolDate):''}`:`your zoledronic acid (Reclast) infusion is scheduled for ${A.zolDate?fmtDate(A.zolDate):''}`}. This follow-up medication helps you keep the bone you gained. I recommend repeating this test in about 2 years.${CAL}`},
+    anab:{title:APPT, note:`${anLine}. Should be followed by an antiresorptive to keep the bone gained.`,
+      plan:`${anLine}, not on follow-on therapy; appointment required to discuss antiresorptive treatment.`,
       nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with a bone-building medication, it is important that they schedule an appointment to discuss starting a follow-up medication to keep the bone they gained.'},
     hol_stable:{title:'Continue drug holiday; repeat DEXA in 2 years', note:`${p?`BMD ${chg} compared with prior.`:'Prior DEXA not available for comparison.'}${long?` Holiday is longer than typical for ${d.name} (about ${d.typ} years); consider reassessing at the next visit.`:''}`,
       plan:`${holLine}; ${p?`BMD ${chg} vs prior`:'prior DEXA not available for comparison'}; continue holiday, recommend repeat DEXA in 2 years (due ~${dueBy(2)})${long?'; consider reassessing holiday at next visit':''}.`,
@@ -282,6 +292,8 @@ function render(){
     if (n.note) h += `<div class="field"><label for="f-note">Mixed results? Add a note <span class="opt">(optional · type it before choosing above)</span></label><textarea id="f-note" rows="2" maxlength="200" placeholder="e.g. spine +4.1%*, L total hip −6.2%*">${esc(A.bmdNote||'')}</textarea></div>`;
   } else if (n.kind==='fxsites'){
     h += `<div class="fxlist" id="fxbox"></div><div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
+  } else if (n.kind==='fulldate'){
+    h += `<div class="field"><label for="f-zd">Date</label><input type="date" id="f-zd" value="${A.zolDate||''}"></div><div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
   } else if (n.kind==='fxdate'){
     h += ymFields((A.fxDates||{})[curFx()]);
   } else if (n.kind==='txend'){
@@ -331,7 +343,13 @@ function render(){
     const yold=document.getElementById('f-eyold'); if(yold) yold.onchange=()=>{ card.querySelectorAll('.yseg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); };
     card.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{ if(yold && b.classList.contains('yseg')){ yold.value=''; err.textContent=''; } const was=b.classList.contains('on'); b.parentElement.querySelectorAll('.seg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')}); if(!was){b.classList.add('on');b.setAttribute('aria-pressed','true')} });
     document.getElementById('b-next').onclick = () => {
-      if (n.kind==='fxdate'){
+      if (n.kind==='fulldate'){
+        const zd=document.getElementById('f-zd').value, today=new Date().toISOString().slice(0,10);
+        if(!zd) return err.textContent='Enter the date.';
+        if(A.zolFU==='Received' && zd>today) return err.textContent='A received infusion cannot be dated in the future.';
+        if(zd < A.txEnd) return err.textContent='The zoledronic acid date should be after the last anabolic dose.';
+        A.zolDate=zd; push('@anab_zol');
+      } else if (n.kind==='fxdate'){
         const [fy,fm] = readYM();
         if(!fy) return err.textContent='Choose the year of the fracture.'; if(!fm) return err.textContent='Choose the month of the fracture.';
         const v=`${fy}-${String(fm).padStart(2,'0')}`;
@@ -383,7 +401,7 @@ function ymFields(val){
 function readYM(){ const ys=card.querySelector('.yseg.on'); return [ys? +ys.dataset.y : +document.getElementById('f-eyold').value, (card.querySelector('.mseg.on')? +card.querySelector('.mseg.on').dataset.m : 0)]; }
 
 function withSeverity(msg){
-  if (A.t > -3.0 || hol()) return msg;
+  if (A.t > -3.0 || hol() || (stack.includes('txDrug') && isAnab())) return msg;
   const sev = `Your lowest bone density score (T-score ${fmtT(A.t)}) is in the more severe range of osteoporosis, which further raises your risk of a fracture. `;
   const i = msg.indexOf('. ');
   return i < 0 ? sev + msg : msg.slice(0, i+2) + sev + msg.slice(i+2);
@@ -415,7 +433,7 @@ function copy(btn){
 function renderTrail(){
   const items = [];
   if (A.date && stack.length>1) items.push(['DEXA date',fmtMY(A.date)],['Lowest T-score',fmtT(A.t)+(A.site?` (${A.site})`:'')]);
-  stack.slice(1,-1).forEach((id)=>{ const n=nodes[id]; if(n&&n.kind==='yn') items.push([n.label,yn(A[ynKeys[id]])]); if(id==='frax') items.push([A.tbs?'FRAX-TBS':'FRAX',`${A.mof}% / ${A.hip}%`]); if(id==='priorDate') items.push(['Prior DEXA',fmtMY(A.priorDate)]); if(id==='txEnd') items.push(['Last dose',fmtMY(A.txEnd)]); if(id==='fxsite') items.push(['Fracture site',fxDesc()]); if(n&&n.kind==='multi') items.push([n.label,A[id]]); if(n&&n.note&&A.bmdNote) items.push(['BMD note',esc(A.bmdNote)]); });
+  stack.slice(1,-1).forEach((id)=>{ const n=nodes[id]; if(n&&n.kind==='yn') items.push([n.label,yn(A[ynKeys[id]])]); if(id==='frax') items.push([A.tbs?'FRAX-TBS':'FRAX',`${A.mof}% / ${A.hip}%`]); if(id==='priorDate') items.push(['Prior DEXA',fmtMY(A.priorDate)]); if(id==='zolDate') items.push(['Zoledronic acid date',fmtDate(A.zolDate)]); if(id==='txEnd') items.push(['Last dose',fmtMY(A.txEnd)]); if(id==='fxsite') items.push(['Fracture site',fxDesc()]); if(n&&n.kind==='multi') items.push([n.label,A[id]]); if(n&&n.note&&A.bmdNote) items.push(['BMD note',esc(A.bmdNote)]); });
   document.getElementById('trail').hidden = !items.length;
   document.getElementById('trailList').innerHTML = items.map(([k,v])=>`<li><span>${k}</span><span>${v}</span></li>`).join('');
 }
