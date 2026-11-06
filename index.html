@@ -133,6 +133,7 @@ const curFx = () => fxKeys()[+stack[stack.length-1].split(':')[1]];
 const fxDesc = () => fxKeys().map(k=>{ const d=(A.fxDates||{})[k]; return d ? `${fxName(k)} ${fmtMY(d)}` : fxName(k); }).join(', ');
 const nc = () => stack.includes('whyNo') && A.whyNo==='Not a candidate';
 const isAnab = () => A.txDrug==='Anabolic agent';
+const anTarget = () => A.zolFU==='Neither' ? '@anab' : '@anab_zol';
 const drugName = () => isAnab() ? (A.anWhich||'anabolic therapy').toLowerCase() : DRUGS[A.txDrug].name;
 const hol = () => stack.includes('txEnd') && !isAnab();
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -161,7 +162,10 @@ const nodes = {
   anWhich:{kind:'multi', q:'Which anabolic agent?', label:'Anabolic agent',
     opts:[['Teriparatide','Forteo, generic','txEnd'],['Abaloparatide','Tymlos','txEnd'],['Romosozumab','Evenity','txEnd']]},
   zolFU:{kind:'multi', q:'Has the patient received or been scheduled for zoledronic acid (Reclast)?', hint:'Follow-on antiresorptive therapy after the anabolic course.', label:'Follow-on zoledronic acid',
-    opts:[['Received','Infusion already given','zolDate'],['Scheduled','Infusion date set','zolDate'],['Neither','Not given or scheduled','@anab']]},
+    opts:[['Received','Infusion already given','zolDate'],['Scheduled','Infusion date set','zolDate'],['Neither','Not given or scheduled','anPrior']]},
+  anPrior:{kind:'yn', q:'Is there a prior DEXA available for comparison?', hint:'Answer No if the prior scan was done at a different facility or on a different machine. Change can only be measured reliably on the same machine.', label:'Prior DEXA available', yes:'priorDate', no:()=>anTarget()},
+  abmd:{kind:'multi', note:true, q:'How has bone density changed since the prior scan?', hint:'Use the largest drop the report marks as significant.', label:'BMD vs prior', info:BMD_INFO,
+    opts:[['Improved','Significant increase, no significant drop',()=>anTarget()],['No real change','No change marked significant',()=>anTarget()],['Mild drop','3 to 5% lower',()=>anTarget()],['Moderate drop','5 to 10% lower',()=>anTarget()],['Large drop','More than 10% lower',()=>anTarget()]]},
   zolDate:{kind:'fulldate', q:()=>A.zolFU==='Received'?'When was the zoledronic acid given?':'When is the zoledronic acid scheduled?'},
   anFull:{kind:'yn', q:()=> A.anWhich==='Romosozumab' ? 'Did the patient complete the full 12-month course?' : 'Did the patient complete two years of treatment?', label:'Completed full course', yes:'zolFU', no:'anDur'},
   anDur:{kind:'multi', q:()=>`How long was the patient on ${drugName()}?`, label:'Treated for',
@@ -182,7 +186,7 @@ const nodes = {
   tbs:{kind:'yn', q:'Was the scan done with TBS?', hint:'Trabecular bone score section on the report.', label:'Scan with TBS', yes:'frax', no:'frax'},
   frax:{kind:'frax', q:()=>A.tbs?'Enter the TBS-adjusted FRAX':'Enter the FRAX', hint:'10-year probabilities from the report.'},
 };
-const ynKeys = {anFull:'anFull',dm:'dm',fx:'fx',everfx:'everfx',pxTx:'hxtx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
+const ynKeys = {anFull:'anFull',anPrior:'anPrior',dm:'dm',fx:'fx',everfx:'everfx',pxTx:'hxtx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
 const CAL = `\n\nTo keep your bones strong, most adults over 50 need about 1,000 to 1,200 mg of calcium a day from food and supplements combined. If you don't get that much from your diet, a calcium supplement can make up the difference. I usually recommend calcium citrate, which is well absorbed and can be taken with or without food. Take no more than 500 to 600 mg at a time, and split larger amounts through the day.\n\nFor a list of calcium-rich foods and how much calcium they contain: https://ods.od.nih.gov/factsheets/Calcium-Consumer/\n\nRegular weight-bearing exercise, enough vitamin D, and preventing falls also help protect your bones.`;
 
 function interval(){
@@ -212,6 +216,11 @@ function outcome(id){
   const NURSE = 'Please call patient and let them know that their bone density test shows osteoporosis and it is important that they schedule an appointment to discuss treatment options. Prior to the appointment, they should come to the lab for some additional lab testing. Please order BMP, PTH, 25-OH vitamin D, and CBC for diagnosis of osteoporosis.';
   const APPT = 'Appointment required to discuss treatment';
   const p = pa(), n = nc();
+  const ac = stack.includes('abmd');
+  const ADESC = {'Improved':'improved','No real change':'stable','Mild drop':'mildly decreased (3–5%)','Moderate drop':'moderately decreased (5–10%)','Large drop':'severely decreased (>10%)'};
+  const AMSG = {'Improved':'Your bone density has improved since your last scan, which is good news.','No real change':'Your bone density is stable compared with your last scan.','Mild drop':'Your bone density has dropped slightly since your last scan.','Moderate drop':'Your bone density has dropped since your last scan.','Large drop':'Your bone density has dropped significantly since your last scan.'};
+  const anCmp = ac ? `BMD ${ADESC[A.abmd]} vs prior; ` : '';
+  const anMsg = ac ? ' '+AMSG[A.abmd] : '';
   const anCourse = !stack.includes('anFull') ? '' : A.anFull ? `completed full ${A.anWhich==='Romosozumab'?'12-month':'24-month'} course` : `treated ${(A.anDur||'').toLowerCase()}, stopped due to ${(A.anWhy||'').toLowerCase()}`;
   const anLine = `prior ${A.anWhich?A.anWhich.toLowerCase():'anabolic therapy'}${A.txEnd?` (last dose ${fmtMY(A.txEnd)}${anCourse?', '+anCourse:''})`:''}`;
   const oc = stack.includes('obmd');
@@ -263,12 +272,12 @@ function outcome(id){
       plan:'prior denosumab, not on follow-on therapy; appointment required to discuss transition treatment.',
       nurse:'Please call patient and let them know that their bone density test results are back. Because they were previously treated with denosumab (Prolia), it is important that they schedule an appointment soon to discuss next steps in treatment. Stopping denosumab without a follow-up medication can lead to rapid bone loss and spine fractures.'},
     anab_zol:{title:`Follow-on zoledronic acid ${A.zolFU==='Received'?'given':'scheduled'}; repeat DEXA in 2 years`, note:`${anLine}. Zoledronic acid ${A.zolFU==='Received'?'given':'scheduled for'} ${A.zolDate?fmtDate(A.zolDate):''}.`,
-      plan:`${anLine}; follow-on zoledronic acid ${A.zolFU==='Received'?'given':'scheduled'} ${A.zolDate?fmtDate(A.zolDate):''}; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
-      msg:`Your bone density test results are back. You have completed your course of ${drugName()}, and ${A.zolFU==='Received'?`you received zoledronic acid (Reclast) on ${A.zolDate?fmtDate(A.zolDate):''}`:`your zoledronic acid (Reclast) infusion is scheduled for ${A.zolDate?fmtDate(A.zolDate):''}`}. This follow-up medication helps you keep the bone you gained. I recommend repeating this test in about 2 years.${CAL}`},
+      plan:`${anLine}; ${anCmp}follow-on zoledronic acid ${A.zolFU==='Received'?'given':'scheduled'} ${A.zolDate?fmtDate(A.zolDate):''}; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
+      msg:`Your bone density test results are back. You have completed your course of ${drugName()}, and ${A.zolFU==='Received'?`you received zoledronic acid (Reclast) on ${A.zolDate?fmtDate(A.zolDate):''}`:`your zoledronic acid (Reclast) infusion is scheduled for ${A.zolDate?fmtDate(A.zolDate):''}`}. This follow-up medication helps you keep the bone you gained.${anMsg} I recommend repeating this test in about 2 years.${CAL}`},
     anab:{title:'Repeat DEXA in 2 years', note:`${anLine}. No follow-on zoledronic acid given or scheduled.`,
       warn:'Follow-on treatment with Reclast is very important to ensure that gains in bone density are preserved. Contact patient if necessary.',
-      plan:`${anLine}; no follow-on zoledronic acid given or scheduled; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
-      msg:`Your bone density test results are back. You have completed your course of ${drugName()}. It is important to follow it with another medication, such as zoledronic acid (Reclast), to keep the bone you gained. If you have not started one yet, please contact the office so we can arrange it. I recommend repeating this test in about 2 years.${CAL}`},
+      plan:`${anLine}; ${anCmp}no follow-on zoledronic acid given or scheduled; recommend repeat DEXA in 2 years (due ~${dueBy(2)}).`,
+      msg:`Your bone density test results are back. You have completed your course of ${drugName()}.${anMsg} It is important to follow it with another medication, such as zoledronic acid (Reclast), to keep the bone you gained. If you have not started one yet, please contact the office so we can arrange it. I recommend repeating this test in about 2 years.${CAL}`},
     hol_stable:{title:'Continue drug holiday; repeat DEXA in 2 years', note:`${p?`BMD ${chg} compared with prior.`:'Prior DEXA not available for comparison.'}${long?` Holiday is longer than typical for ${d.name} (about ${d.typ} years); consider reassessing at the next visit.`:''}`,
       plan:`${holLine}; ${p?`BMD ${chg} vs prior`:'prior DEXA not available for comparison'}; continue holiday, recommend repeat DEXA in 2 years (due ~${dueBy(2)})${long?'; consider reassessing holiday at next visit':''}.`,
       msg:`${p?(imp?'Your bone density has improved compared with your last scan, which is good news.':'Your bone density is stable compared with your last scan, which is good news.'):'Your bone density test results are back.'} It is reasonable to continue your break from ${d&&d.name} for now, and I recommend repeating this test in about 2 years.${CAL}`},
@@ -355,7 +364,7 @@ function render(){
         if(!zd) return err.textContent='Enter the date.';
         if(A.zolFU==='Received' && zd>today) return err.textContent='A received infusion cannot be dated in the future.';
         if(zd < A.txEnd) return err.textContent='The zoledronic acid date should be after the last anabolic dose.';
-        A.zolDate=zd; push('@anab_zol');
+        A.zolDate=zd; push('anPrior');
       } else if (n.kind==='fxdate'){
         const [fy,fm] = readYM();
         if(!fy) return err.textContent='Choose the year of the fracture.'; if(!fm) return err.textContent='Choose the month of the fracture.';
@@ -374,7 +383,7 @@ function render(){
         if(!py) return err.textContent='Choose the year of the prior DEXA.'; if(!pm) return err.textContent='Choose the month of the prior DEXA.';
         const p=`${py}-${String(pm).padStart(2,'0')}`;
         if(py<1990||p>=A.date.slice(0,7)) return err.textContent='The prior DEXA must be before the current DEXA.';
-        A.priorDate=p; push(stack.includes('opPrior')?'obmd':hol()?'hbmd':'discSince');
+        A.priorDate=p; push(stack.includes('anPrior')?'abmd':stack.includes('opPrior')?'obmd':hol()?'hbmd':'discSince');
       } else if (n.kind==='report'){
         const [dy,dm]=readYM(), t=parseFloat(document.getElementById('f-t').value), now=new Date();
         if(!dy) return err.textContent='Choose the year of the DEXA.'; if(!dm) return err.textContent='Choose the month of the DEXA.';
@@ -420,7 +429,7 @@ function renderOutcome(id){
   if (o.warn) h += `<div class="warnbox"><strong>NOTE:</strong> ${o.warn}</div>`;
   if (!o.stop){
     const now = new Date(), reviewed = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`;
-    const note = (stack.includes('bmd')||stack.includes('hbmd')||stack.includes('obmd')) && A.bmdNote ? ` BMD note: ${A.bmdNote.replace(/\.$/,'')}.` : '';
+    const note = (stack.includes('bmd')||stack.includes('hbmd')||stack.includes('obmd')||stack.includes('abmd')) && A.bmdNote ? ` BMD note: ${A.bmdNote.replace(/\.$/,'')}.` : '';
     const line = `${lineStart()} — ${o.plan}${note} Reviewed ${reviewed}.`;
     h += `<div class="out-block"><div class="out-head"><h3>Problem list</h3><button class="copy" data-for="pl">Copy</button></div><div class="box" id="pl">${esc(line)}</div></div>`;
     if (o.nurse) h += `<div class="out-block"><div class="out-head"><h3>Nurse pool message</h3><button class="copy" data-for="np">Copy</button></div><div class="box msg" id="np">${o.nurse}</div></div>`;
