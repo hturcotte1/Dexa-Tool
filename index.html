@@ -141,6 +141,9 @@ const why = () => !stack.includes('whyNo') ? 'not on treatment' : nc() ? 'not on
 
 const nodes = {
   report:{kind:'report', q:'Enter the DEXA results', hint:'From the report header and summary table.'},
+  opPrior:{kind:'yn', q:'Is there a prior DEXA available for comparison?', hint:'Answer No if the prior scan was done at a different facility or on a different machine. Change can only be measured reliably on the same machine.', label:'Prior DEXA available', yes:'priorDate', no:'dm'},
+  obmd:{kind:'multi', note:true, q:'How has bone density changed since the prior scan?', hint:'Use the largest drop the report marks as significant.', label:'BMD vs prior', info:BMD_INFO,
+    opts:[['Improved','Significant increase, no significant drop','dm'],['No real change','No change marked significant','dm'],['Mild drop','3 to 5% lower','dm'],['Moderate drop','5 to 10% lower','dm'],['Large drop','More than 10% lower','@op_large']]},
   dm:{kind:'yn', q:'Does the patient have diabetes?', hint:'Diabetes shortens the repeat DEXA interval (ADA).', label:'Diabetes', yes:'@repeat', no:'@repeat'},
   fx:{kind:'yn', q:'Fragility fracture in the last 6 months?', hint:'Low-trauma fracture, such as a fall from standing height or less.', label:'Fragility fracture, last 6 mo', yes:'@fx_appt', no:()=>osteoRange()?'priordx':'everfx'},
   everfx:{kind:'yn', q:'Has the patient ever had a fragility fracture?', hint:'Low-trauma fracture of the hip, spine, wrist, upper arm, or pelvis in adulthood. A fragility fracture means osteoporosis even if the T-score is above −2.5.', label:'Prior fragility fracture', yes:'fxsite', no:'tbs'},
@@ -168,6 +171,11 @@ const ynKeys = {dm:'dm',fx:'fx',everfx:'everfx',priordx:'priordx',osHxTx:'hxtx',
 const CAL = `\n\nTo keep your bones strong, most adults over 50 need about 1,000 to 1,200 mg of calcium a day from food and supplements combined. If you don't get that much from your diet, a calcium supplement can make up the difference. I usually recommend calcium citrate, which is well absorbed and can be taken with or without food. Take no more than 500 to 600 mg at a time, and split larger amounts through the day.\n\nFor a list of calcium-rich foods and how much calcium they contain: https://ods.od.nih.gov/factsheets/Calcium-Consumer/\n\nRegular weight-bearing exercise, enough vitamin D, and preventing falls also help protect your bones.`;
 
 function interval(){
+  const b = baseInterval();
+  if (stack.includes('obmd') && A.obmd==='Moderate drop' && b.lo>1) return {txt:'1–2 years',lo:1,basis:'Moderate BMD drop (5–10%) since prior DEXA'};
+  return b;
+}
+function baseInterval(){
   if (A.dm) return A.t <= -2.0 ? {txt:'1–2 years',lo:1,basis:'T2DM with lowest T-score ≤ −2.0'} : {txt:'2–3 years',lo:2,basis:'ADA Standards of Care (diabetes)'};
   if (A.t > -1.0) return {txt:'10 years',lo:10,basis:'Lowest T-score above −1.0'};
   if (A.t > -1.5) return {txt:'7–10 years',lo:7,basis:'Mild osteopenia (−1.0 to −1.49)'};
@@ -189,6 +197,9 @@ function outcome(id){
   const NURSE = 'Please call patient and let them know that their bone density test shows osteoporosis and it is important that they schedule an appointment to discuss treatment options. Prior to the appointment, they should come to the lab for some additional lab testing. Please order BMP, PTH, 25-OH vitamin D, and CBC for diagnosis of osteoporosis.';
   const APPT = 'Appointment required to discuss treatment';
   const p = pa(), n = nc();
+  const oc = stack.includes('obmd');
+  const OPDESC = {'Improved':'improved','No real change':'stable','Mild drop':'mildly decreased (3–5%)','Moderate drop':'moderately decreased (5–10%)'};
+  const OPMSG = {'Improved':'Your bone density has improved since your last scan, which is good news.','No real change':'Your bone density is stable compared with your last scan.','Mild drop':'Your bone density has dropped slightly since your last scan.','Moderate drop':'Your bone density has dropped since your last scan, so I would like to recheck it a little sooner.'};
   const imp = p && ((stack.includes('bmd') && A.bmd==='Improved') || (stack.includes('hbmd') && A.hbmd==='Improved'));
   const chg = imp ? 'improved' : 'stable';
   const d = DRUGS[A.txDrug], hy = hol()&&d ? holYears() : 0, long = hol() && d && hy > d.typ;
@@ -209,9 +220,12 @@ function outcome(id){
       plan:'osteoporosis based on fracture history; appointment required to discuss treatment.', nurse:NURSE},
     appt_frax:{title:APPT, note:`10-year fracture risk at or above treatment threshold (${A.mof}% / ${A.hip}%).`,
       plan:'above treatment threshold; appointment required to discuss treatment.', nurse:NURSE},
-    repeat:{title:`Repeat DEXA in ${iv.txt}`, note:`${iv.basis}. Below treatment threshold (${A.mof}% / ${A.hip}%).`,
-      plan:`below treatment threshold; recommend repeat DEXA in ${iv.txt} (due ~${dueBy(iv.lo)}).`,
-      msg:`Your bone density test results are back. ${A.t>-1.0?'Your bone density is in the normal range.':'Your bones are somewhat thinner than normal (osteopenia), but your estimated fracture risk is below the level where medication is recommended.'} I recommend repeating this test in about ${iv.txt}.${CAL}`},
+    repeat:{title:`Repeat DEXA in ${iv.txt}`, note:`${iv.basis}. Below treatment threshold (${A.mof}% / ${A.hip}%).${oc?` BMD ${OPDESC[A.obmd]} vs prior.`:''}`,
+      plan:`below treatment threshold; ${oc?`BMD ${OPDESC[A.obmd]} vs prior; `:''}recommend repeat DEXA in ${iv.txt} (due ~${dueBy(iv.lo)}).`,
+      msg:`Your bone density test results are back. ${A.t>-1.0?'Your bone density is in the normal range.':'Your bones are somewhat thinner than normal (osteopenia), but your estimated fracture risk is below the level where medication is recommended.'}${oc?' '+OPMSG[A.obmd]:''} I recommend repeating this test in about ${iv.txt}.${CAL}`},
+    op_large:{title:'Appointment recommended', note:'BMD dropped more than 10% since prior DEXA without treatment. Consider secondary causes of bone loss.',
+      plan:'osteopenia, below treatment threshold; BMD severely decreased (>10%) vs prior; appointment recommended via MyChart.',
+      msg:`Your bone density test shows bones that are somewhat thinner than normal (osteopenia), and your bone density has dropped significantly since your last scan. I recommend scheduling an appointment to look into the reason for this change and talk about ways to protect your bones. You can schedule through MyChart or by calling the office.${CAL}`},
     os_appt:{title:'Appointment recommended', note:`Known osteoporosis, not on treatment, and treatment not discussed ${p?'since the prior DEXA':'in the past 2 years'}.`,
       plan:`known osteoporosis, not on treatment; treatment not discussed ${p?'since prior DEXA':'in past 2 years'}; appointment recommended via MyChart.`,
       msg:`Your bone density test results are back and continue to show osteoporosis, which means your bones are thinner than normal and more likely to break. Osteoporosis treatment can lower your risk of a fracture, so I recommend scheduling an appointment to talk about your options. You can schedule through MyChart or by calling the office.${CAL}`},
@@ -331,7 +345,7 @@ function render(){
         if(!py) return err.textContent='Choose the year of the prior DEXA.'; if(!pm) return err.textContent='Choose the month of the prior DEXA.';
         const p=`${py}-${String(pm).padStart(2,'0')}`;
         if(py<1990||p>=A.date.slice(0,7)) return err.textContent='The prior DEXA must be before the current DEXA.';
-        A.priorDate=p; push(hol()?'hbmd':'discSince');
+        A.priorDate=p; push(stack.includes('opPrior')?'obmd':hol()?'hbmd':'discSince');
       } else if (n.kind==='report'){
         const [dy,dm]=readYM(), t=parseFloat(document.getElementById('f-t').value), now=new Date();
         if(!dy) return err.textContent='Choose the year of the DEXA.'; if(!dm) return err.textContent='Choose the month of the DEXA.';
@@ -343,7 +357,7 @@ function render(){
         const m=parseFloat(document.getElementById('f-mof').value), hp=parseFloat(document.getElementById('f-hip').value);
         if(isNaN(m)||isNaN(hp)) return err.textContent='Enter both FRAX percentages.';
         if(m<0||m>100||hp<0||hp>100) return err.textContent='FRAX values must be between 0 and 100.';
-        A.mof=m; A.hip=hp; push(m>=20||hp>=3?'priordx':'dm');
+        A.mof=m; A.hip=hp; push(m>=20||hp>=3?'priordx':(A.t<=-1.0?'opPrior':'dm'));
       }
     };
   }
@@ -376,7 +390,7 @@ function renderOutcome(id){
   let h = `<div class="step">Result</div><div class="outcome ${o.tbd?'tbd':''}"><strong>${o.title}</strong><span>${o.note}</span></div>`;
   if (!o.stop){
     const now = new Date(), reviewed = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`;
-    const note = (stack.includes('bmd')||stack.includes('hbmd')) && A.bmdNote ? ` BMD note: ${A.bmdNote.replace(/\.$/,'')}.` : '';
+    const note = (stack.includes('bmd')||stack.includes('hbmd')||stack.includes('obmd')) && A.bmdNote ? ` BMD note: ${A.bmdNote.replace(/\.$/,'')}.` : '';
     const line = `${lineStart()} — ${o.plan}${note} Reviewed ${reviewed}.`;
     h += `<div class="out-block"><div class="out-head"><h3>Problem list</h3><button class="copy" data-for="pl">Copy</button></div><div class="box" id="pl">${esc(line)}</div></div>`;
     if (o.nurse) h += `<div class="out-block"><div class="out-head"><h3>Nurse pool message</h3><button class="copy" data-for="np">Copy</button></div><div class="box msg" id="np">${o.nurse}</div></div>`;

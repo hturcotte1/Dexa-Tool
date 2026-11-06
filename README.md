@@ -28,6 +28,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
    - **No** → **Ever had a fragility fracture?** Yes → choose site(s): hip (right/left), spinal compression (lumbar/thoracic/both), distal radius (right/left), or other → month/year of each fracture → osteoporosis path (step 5); No → step 4.
 4. **Scan with TBS?** Collect TBS-adjusted FRAX if yes, standard FRAX if no.
    - FRAX ≥ 20% major osteoporotic or ≥ 3% hip → osteoporosis path (step 5).
+   - Below threshold with osteopenia (T ≤ −1.0) → **Is there a prior DEXA available for comparison?** Yes → prior month/year → BMD change: improved / no real change / mild drop → usual interval; moderate drop → repeat in 1–2 yr; large drop (>10%) → *Appointment recommended* (MyChart). Then:
    - Below threshold → **Diabetes?** → *Repeat DEXA* at an interval set by `interval()`:
      - Diabetes: 2–3 years, or 1–2 years if T ≤ −2.0 (ADA Standards of Care).
      - No diabetes, by lowest T-score: > −1.0 → 10 yr; −1.0 to −1.49 → 7–10 yr; −1.5 to −1.99 → 3–5 yr; −2.0 to −2.49 → 1–2 yr.
