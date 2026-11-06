@@ -146,7 +146,8 @@ const nodes = {
     opts:[['Improved','Significant increase, no significant drop','dm'],['No real change','No change marked significant','dm'],['Mild drop','3 to 5% lower','dm'],['Moderate drop','5 to 10% lower','dm'],['Large drop','More than 10% lower','@op_large']]},
   dm:{kind:'yn', q:'Does the patient have diabetes?', hint:'Diabetes shortens the repeat DEXA interval (ADA).', label:'Diabetes', yes:'@repeat', no:'@repeat'},
   fx:{kind:'yn', q:'Fragility fracture in the last 6 months?', hint:'Low-trauma fracture, such as a fall from standing height or less.', label:'Fragility fracture, last 6 mo', yes:'@fx_appt', no:()=>osteoRange()?'priordx':'everfx'},
-  everfx:{kind:'yn', q:'Has the patient ever had a fragility fracture?', hint:'Low-trauma fracture of the hip, spine, wrist, upper arm, or pelvis in adulthood. A fragility fracture means osteoporosis even if the T-score is above −2.5.', label:'Prior fragility fracture', yes:'fxsite', no:'tbs'},
+  everfx:{kind:'yn', q:'Has the patient ever had a fragility fracture?', hint:'Low-trauma fracture of the hip, spine, wrist, upper arm, or pelvis in adulthood. A fragility fracture means osteoporosis even if the T-score is above −2.5.', label:'Prior fragility fracture', yes:'fxsite', no:'pxTx'},
+  pxTx:{kind:'yn', q:'History of osteoporosis treatment?', hint:'Previously treated patients go to the drug-holiday questions instead of FRAX, since FRAX is not validated after treatment.', label:'History of treatment', yes:'txDrug', no:'tbs'},
   fxsite:{kind:'fxsites', q:'Where was the fracture?', hint:'Select all that apply.', label:'Fracture site'},
   fxdate:{kind:'fxdate', q:()=>`When was the ${fxName(curFx())} fracture?`, hint:'Month and year are enough.'},
   priordx:{kind:'yn', q:'Prior diagnosis of osteoporosis?', label:'Prior osteoporosis diagnosis', yes:'osHxTx', no:()=>osteoRange()?'@appt_os':hxfx()?'@appt_hxfx':'@appt_frax'},
@@ -167,7 +168,7 @@ const nodes = {
   tbs:{kind:'yn', q:'Was the scan done with TBS?', hint:'Trabecular bone score section on the report.', label:'Scan with TBS', yes:'frax', no:'frax'},
   frax:{kind:'frax', q:()=>A.tbs?'Enter the TBS-adjusted FRAX':'Enter the FRAX', hint:'10-year probabilities from the report.'},
 };
-const ynKeys = {dm:'dm',fx:'fx',everfx:'everfx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
+const ynKeys = {dm:'dm',fx:'fx',everfx:'everfx',pxTx:'hxtx',priordx:'priordx',osHxTx:'hxtx',priorAvail:'priorAvail',discSince:'disc',disc2y:'disc',tbs:'tbs',fxHxTx:'hxtx',fxDisc:'disc'};
 const CAL = `\n\nTo keep your bones strong, most adults over 50 need about 1,000 to 1,200 mg of calcium a day from food and supplements combined. If you don't get that much from your diet, a calcium supplement can make up the difference. I usually recommend calcium citrate, which is well absorbed and can be taken with or without food. Take no more than 500 to 600 mg at a time, and split larger amounts through the day.\n\nFor a list of calcium-rich foods and how much calcium they contain: https://ods.od.nih.gov/factsheets/Calcium-Consumer/\n\nRegular weight-bearing exercise, enough vitamin D, and preventing falls also help protect your bones.`;
 
 function interval(){
@@ -203,7 +204,7 @@ function outcome(id){
   const imp = p && ((stack.includes('bmd') && A.bmd==='Improved') || (stack.includes('hbmd') && A.hbmd==='Improved'));
   const chg = imp ? 'improved' : 'stable';
   const d = DRUGS[A.txDrug], hy = hol()&&d ? holYears() : 0, long = hol() && d && hy > d.typ;
-  const holLine = hol()&&d ? `osteoporosis, on drug holiday from ${d.name} since ${fmtMY(A.txEnd)} (${hy.toFixed(1)} yr${long?', longer than typical':''})` : '';
+  const holLine = hol()&&d ? `${A.t>-1.0?'treated osteoporosis (now normal range)':A.t>-2.5?'treated osteoporosis (now osteopenia range)':'osteoporosis'}, on drug holiday from ${d.name} since ${fmtMY(A.txEnd)} (${hy.toFixed(1)} yr${long?', longer than typical':''})` : '';
   const holDrop = (deg,pct,adv) => ({title:'Appointment recommended to discuss restarting treatment', note:`BMD ${deg} decreased (${pct}) since prior while on holiday.`,
     plan:`${holLine}; BMD ${deg} decreased (${pct}) vs prior; appointment recommended via MyChart to discuss restarting treatment.`,
     msg:`Your bone density has dropped ${adv} since your last scan, which suggests the protective effect of ${d&&d.name} is wearing off. I recommend scheduling an appointment to talk about restarting treatment. You can schedule through MyChart or by calling the office.${CAL}`});
