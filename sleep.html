@@ -134,7 +134,7 @@ const num = v => String(+(+v).toFixed(1));
 const yn = v => v ? 'Yes' : 'No';
 
 const TYPES = {
-  HSAT:{label:'Home sleep apnea test (HSAT)', sub:'Nomad or other home device', short:'HSAT'},
+  HOME:{label:'Home sleep study', sub:'Nomad or other home device', short:'Home sleep study'},
   PSG:{label:'In-lab polysomnogram (PSG)', sub:'Full-night diagnostic study', short:'PSG'},
   SPLIT:{label:'Split-night study', sub:'Enter the diagnostic portion only', short:'Split-night PSG'},
 };
@@ -145,7 +145,6 @@ const sev = () => A.ahi < 5 ? 'normal' : A.ahi < 15 ? 'mild' : A.ahi < 30 ? 'mod
 const central = () => osa() && A.cahi > A.ahi / 2;
 const positional = () => osa() && A.sup != null && A.sup >= 2 * A.ahi;
 const hypox = () => osa() && A.t89 >= 5;
-const sigHyp = () => hypox() && A.hyp === 'Sustained';
 const obese = () => A.bmi >= 30;
 const modSev = () => sev()==='moderate' || sev()==='severe';
 
@@ -154,20 +153,18 @@ const nodes = {
     opts:Object.entries(TYPES).map(([k,t])=>[t.label,t.sub,'ref',k])},
   ref:{kind:'yn', q:'Was a sleep clinic referral placed with the sleep study order?', hint:'Yes means sleep clinic will follow this patient and order treatment. No means you are managing the results.', label:'Sleep clinic referral', key:'ref', yes:'results', no:'results'},
   results:{kind:'results', q:'Enter the results from the report', hint:'Labels match the Nomad report (Nomad AHI, supine Nomad AHI, Nomad CAHI).'},
-  hyp:{kind:'multi', q:()=>`Oxygen was below 89% for ${num(A.t89)} minutes. Is the hypoxemia mostly cyclic or sustained?`, hint:'Check the interpreting physician’s comments. Cyclic desaturation with apneas usually resolves with CPAP; sustained desaturation between events suggests hypoventilation.', label:'Hypoxemia pattern',
-    opts:[['Mostly cyclic, with events','Dips with breathing events','outc','Cyclic'],['Sustained, or hypoventilation suspected','COPD, obesity hypoventilation, neuromuscular disease','outc','Sustained']]},
   outc:{kind:'outcomes', q:'Choose the outcomes', hint:'Suggested outcomes are pre-checked. Change any of them.'},
 };
 
 // Outcome checklist. Order here = order of paragraphs in the MyChart message.
 const OUT = [
   {k:'normNone', label:'Normal study, no further testing', show:()=>!osa(), def:()=>true, excl:'normPSG'},
-  {k:'normPSG', label:'Normal home test, but symptoms suggest OSA: order in-lab PSG', show:()=>!osa() && A.type==='HSAT', def:()=>false, plan:'In-lab PSG ordered.', excl:'normNone'},
+  {k:'normPSG', label:'Normal home study, but symptoms suggest OSA: order in-lab PSG', show:()=>!osa() && A.type==='HOME', def:()=>false, plan:'In-lab PSG ordered.', excl:'normNone'},
   {k:'wait', label:'Wait for initial sleep clinic appointment', show:()=>osa() && A.ref, def:()=>true, plan:'Followed by sleep clinic.'},
-  {k:'cpap', label:'Offer auto-titrating CPAP', sub:'Patient replies to accept; you send the DME order', show:osa, def:()=>!A.ref && !central() && !sigHyp(), plan:'Auto-CPAP offered.'},
-  {k:'cpapFU', label:'CPAP follow-up visit 1–3 months after starting', sub:'Medicare adherence visit (days 31–90)', show:osa, def:()=>!A.ref && !central() && !sigHyp()},
-  {k:'titr', label:'Order titration study', show:osa, def:()=>!A.ref && (central() || sigHyp()), plan:'Titration study ordered.'},
-  {k:'sleepRef', label:'Offer sleep clinic referral', show:()=>osa() && !A.ref, def:()=>central() || sigHyp(), plan:'Sleep clinic referral offered.'},
+  {k:'cpap', label:'Offer auto-titrating CPAP', sub:'Patient replies to accept; you send the DME order', show:osa, def:()=>!A.ref && !central(), plan:'Auto-CPAP offered.'},
+  {k:'cpapFU', label:'CPAP follow-up visit 1–3 months after starting', sub:'Medicare adherence visit (days 31–90)', show:osa, def:()=>!A.ref && !central()},
+  {k:'titr', label:'Order titration study', show:osa, def:()=>!A.ref && central(), plan:'Titration study ordered.'},
+  {k:'sleepRef', label:'Offer sleep clinic referral', show:()=>osa() && !A.ref, def:()=>central(), plan:'Sleep clinic referral offered.'},
   {k:'oral', label:'Oral appliance as an alternative', show:osa, def:()=>sev()==='mild'},
   {k:'pos', label:'Positional therapy', sub:'Supine AHI at least twice the overall AHI', show:()=>osa() && A.sup != null, def:positional},
   {k:'wt', label:'Weight management', sub:()=>obese() && modSev() ? 'Includes tirzepatide (Zepbound) mention' : 'BMI 30 or higher', show:osa, def:obese},
@@ -257,7 +254,7 @@ function render(){
     document.getElementById('b-yes').onclick = () => go(true);
     document.getElementById('b-no').onclick = () => go(false);
   } else if (n.kind==='multi'){
-    card.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ const o=n.opts[+b.dataset.i]; A[id==='type'?'type':'hyp'] = o[3]; push(o[2]); });
+    card.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ const o=n.opts[+b.dataset.i]; A.type = o[3]; push(o[2]); });
   } else if (n.kind==='results'){
     bindResults();
   } else if (n.kind==='outcomes'){
@@ -274,7 +271,7 @@ function flags(){
   const f = [osa() ? `${sev()[0].toUpperCase()+sev().slice(1)} (AHI ${num(A.ahi)})` : `Normal (AHI ${num(A.ahi)})`];
   if (central()) f.push('Central-predominant');
   if (positional()) f.push('Positional');
-  if (hypox()) f.push(sigHyp() ? 'Sustained hypoxemia' : 'Cyclic hypoxemia');
+  if (hypox()) f.push(`Hypoxemia (${num(A.t89)} min <89%)`);
   if (obese()) f.push(`BMI ${num(A.bmi)}`);
   f.push(A.ref ? 'Referred to sleep clinic' : 'Not referred');
   return f;
@@ -322,8 +319,7 @@ function bindResults(){
     if (t89==null || isNaN(t89) || t89<0 || t89>720) return err.textContent='Enter the minutes below 89% (0 if none).';
     if (bmi==null || isNaN(bmi) || bmi<12 || bmi>90) return err.textContent='Enter the BMI as a number from 12 to 90.';
     Object.assign(A, {date:d, ahi, sup, cahi, nad, t89, bmi});
-    if (!hypox()) delete A.hyp;
-    push(hypox() ? 'hyp' : 'outc');
+    push('outc');
   };
 }
 
@@ -342,7 +338,7 @@ function renderResult(){
   const line = problemLine(), pcp = !!A.sel.pcp;
   const title = !osa() ? 'No sleep apnea' : central() ? `Central-predominant sleep apnea, ${sev()}` : `Obstructive sleep apnea, ${sev()}`;
   let h = `<div class="step">Result</div><div class="outcome"><strong>${title}</strong><span>${flags().join(' · ')}</span></div>`;
-  if (A.sel.cpap && (central() || sigHyp())) h += `<div class="warnbox"><strong>NOTE:</strong> Auto-CPAP is checked, but the study is ${central()?'central-predominant':'notable for sustained hypoxemia'}. Auto-CPAP can worsen central apnea and does not treat hypoventilation; a titration study is usually preferred.</div>`;
+  if (A.sel.cpap && central()) h += `<div class="warnbox"><strong>NOTE:</strong> Auto-CPAP is checked, but the study is central-predominant. Auto-CPAP can worsen central apnea; a titration study is usually preferred.</div>`;
   if (A.sel.cpap && hypox()) h += `<div class="warnbox"><strong>NOTE:</strong> Baseline hypoxemia present. Consider overnight oximetry on CPAP at follow-up; the CPAP download does not report oxygen.</div>`;
   h += `<div class="out-block"><div class="out-head"><h3>Problem list</h3><button class="copy" data-for="pl">Copy</button></div><div class="box" id="pl">${esc(line)}</div></div>`;
   if (pcp){
@@ -376,7 +372,6 @@ function renderTrail(){
     if (id==='results'){
       items.push(['Study date', fmtMY(A.date)], ['AHI', `${num(A.ahi)}/h${A.sup!=null?` (supine ${num(A.sup)})`:''}`], ['Central AHI', num(A.cahi)], ['SpO2 nadir', num(A.nad)+'%'], ['Time <89%', num(A.t89)+' min'], ['BMI', num(A.bmi)]);
     }
-    if (id==='hyp') items.push(['Hypoxemia pattern', A.hyp==='Sustained' ? 'Sustained' : 'Mostly cyclic']);
   });
   document.getElementById('trail').hidden = !items.length;
   document.getElementById('trailList').innerHTML = items.map(([k,v])=>`<li><span>${k}</span><span>${esc(v)}</span></li>`).join('');
