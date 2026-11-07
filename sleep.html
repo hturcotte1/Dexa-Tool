@@ -147,6 +147,9 @@ const positional = () => osa() && A.sup != null && A.sup >= 2 * A.ahi;
 const hypox = () => osa() && A.t89 >= 5;
 const obese = () => A.bmi >= 30;
 const modSev = () => sev()==='moderate' || sev()==='severe';
+// Tirzepatide (Zepbound) is approved for OSA only: not offered with any meaningful central component (central AHI >= 5 or central-predominant).
+const centralComponent = () => central() || A.cahi >= 5;
+const tirz = () => modSev() && obese() && !centralComponent();
 
 const nodes = {
   type:{kind:'multi', q:'What type of sleep study was done?', label:'Study type',
@@ -167,7 +170,7 @@ const OUT = [
   {k:'sleepRef', label:'Offer sleep clinic referral', show:()=>osa() && !A.ref, def:()=>central(), plan:'Sleep clinic referral offered.'},
   {k:'oral', label:'Oral appliance as an alternative', show:osa, def:()=>sev()==='mild'},
   {k:'pos', label:'Positional therapy', sub:'Supine AHI at least twice the overall AHI', show:()=>osa() && A.sup != null, def:positional},
-  {k:'wt', label:'Weight management', sub:()=>obese() && modSev() ? 'Includes tirzepatide (Zepbound) mention' : 'BMI 30 or higher', show:osa, def:obese},
+  {k:'wt', label:'Weight management', sub:()=>tirz() ? 'Includes tirzepatide (Zepbound) mention' : obese() && modSev() && centralComponent() ? 'No Zepbound mention: central apnea component' : 'BMI 30 or higher', show:osa, def:obese},
   {k:'pcp', label:'Visit with PCP', sub:'Sends a nurse pool message instead of MyChart', show:()=>true, def:()=>false, plan:'PCP visit requested.'},
 ];
 const shown = () => OUT.filter(o=>o.show());
@@ -209,7 +212,7 @@ function myChart(){
       ? 'Another option for mild sleep apnea is an oral appliance — a custom mouthpiece made by a dentist that holds your lower jaw forward during sleep. Let me know if you would like to discuss it.'
       : 'If CPAP does not work for you, another option is an oral appliance — a custom mouthpiece made by a dentist that holds your lower jaw forward during sleep. Let me know if you would like to discuss it.',
     pos:'Your breathing pauses were much more frequent when you slept on your back. Sleeping on your side may help, and devices such as a positional pillow or a wearable that vibrates when you roll onto your back can make that easier.',
-    wt:'Weight loss can improve sleep apnea, and for some people it goes away.' + (modSev() && obese() ? ' There is also an FDA-approved medication, tirzepatide (Zepbound), for moderate to severe sleep apnea in people with obesity. Let me know if you would like to talk about it.' : ''),
+    wt:'Weight loss can improve sleep apnea, and for some people it goes away.' + (tirz() ? ' There is also an FDA-approved medication, tirzepatide (Zepbound), for moderate to severe sleep apnea in people with obesity. Let me know if you would like to talk about it.' : ''),
   };
   OUT.forEach(o=>{ if (s[o.k] && o.show() && T[o.k]) P.push(T[o.k]); });
   if (osa()) P.push(SAFETY);

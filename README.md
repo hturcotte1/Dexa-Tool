@@ -87,7 +87,7 @@ A second tool on the same site, built the same way (one file, no build step, no 
 | Offer sleep clinic referral | Not referred, central-predominant |
 | Oral appliance | Mild OSA |
 | Positional therapy | Positional |
-| Weight management | BMI ≥30 (tirzepatide line added if moderate/severe) |
+| Weight management | BMI ≥30 (tirzepatide line added if moderate/severe and no central component: central AHI <5 and not central-predominant) |
 | Visit with PCP | Never; switches output to a nurse pool message |
 
 Every OSA message gets fixed drowsy-driving and alcohol/sedative lines. On-screen notes appear if auto-CPAP is checked for a central-predominant study, or when any hypoxemia is present (consider oximetry on CPAP).
