@@ -70,8 +70,9 @@ A second tool on the same site, built the same way (one file, no build step, no 
 1. **Study type:** home sleep study, in-lab PSG, or split-night (diagnostic portion only).
 2. **Sleep clinic referral placed with the order?** Decides who owns treatment.
 3. **Results:** study month/year, AHI, supine AHI (optional), central AHI, SpO2 nadir, minutes <89%, BMI. Labels match the Nomad report.
-4. **Outcomes checklist**, pre-checked by rule, every box editable.
-5. **Output:** problem-list line plus a MyChart message, or a nurse pool message if *Visit with PCP* is checked.
+4. **Central apnea comment** (only if central AHI >1): did the interpreting physician comment on central sleep apnea? Yes adds a note to the problem-list line and counts as a central component.
+5. **Outcomes checklist**, pre-checked by rule, every box editable.
+6. **Output:** problem-list line plus a MyChart message, or a nurse pool message if *Visit with PCP* is checked.
 
 **Calculated values:** severity (<5 normal, 5–14.9 mild, 15–29.9 moderate, ≥30 severe); central-predominant (central AHI > 50% of AHI); positional (supine AHI ≥ 2× AHI); hypoxemia (≥5 min <89%, shown as a flag and an on-screen note); obesity (BMI ≥30).
 
@@ -87,7 +88,7 @@ A second tool on the same site, built the same way (one file, no build step, no 
 | Offer sleep clinic referral | Not referred, central-predominant |
 | Oral appliance | Mild OSA |
 | Positional therapy | Positional |
-| Weight management | BMI ≥30 (tirzepatide line added if moderate/severe and no central component: central AHI <5 and not central-predominant) |
+| Weight management | BMI ≥30 (tirzepatide line added if moderate/severe and no central component: not central-predominant and no physician comment on central apnea) |
 | Visit with PCP | Never; switches output to a nurse pool message |
 
 Every OSA message gets fixed drowsy-driving and alcohol/sedative lines. On-screen notes appear if auto-CPAP is checked for a central-predominant study, or when any hypoxemia is present (consider oximetry on CPAP).

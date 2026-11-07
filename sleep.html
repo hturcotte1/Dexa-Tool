@@ -147,8 +147,10 @@ const positional = () => osa() && A.sup != null && A.sup >= 2 * A.ahi;
 const hypox = () => osa() && A.t89 >= 5;
 const obese = () => A.bmi >= 30;
 const modSev = () => sev()==='moderate' || sev()==='severe';
-// Tirzepatide (Zepbound) is approved for OSA only: not offered with any meaningful central component (central AHI >= 5 or central-predominant).
-const centralComponent = () => central() || A.cahi >= 5;
+// Tirzepatide (Zepbound) is approved for OSA only: not offered with a central component
+// (central-predominant, or the interpreting physician commented on central apnea; asked when central AHI > 1).
+const csaNoted = () => A.cahi > 1 && A.csa === true;
+const centralComponent = () => central() || csaNoted();
 const tirz = () => modSev() && obese() && !centralComponent();
 
 const nodes = {
@@ -156,6 +158,7 @@ const nodes = {
     opts:Object.entries(TYPES).map(([k,t])=>[t.label,t.sub,'ref',k])},
   ref:{kind:'yn', q:'Was a sleep clinic referral placed with the sleep study order?', hint:'Yes means sleep clinic will follow this patient and order treatment. No means you are managing the results.', label:'Sleep clinic referral', key:'ref', yes:'results', no:'results'},
   results:{kind:'results', q:'Enter the results from the report', hint:'Labels match the Nomad report (Nomad AHI, supine Nomad AHI, Nomad CAHI).'},
+  csa:{kind:'yn', q:'Did the interpreting physician comment on central sleep apnea?', hint:()=>`Central AHI is ${num(A.cahi)}. Check the interpretation section of the report.`, label:'Physician comment on central apnea', key:'csa', yes:'outc', no:'outc'},
   outc:{kind:'outcomes', q:'Choose the outcomes', hint:'Suggested outcomes are pre-checked. Change any of them.'},
 };
 
@@ -183,7 +186,7 @@ function diagLabel(){
 }
 function problemLine(){
   const plans = OUT.filter(o=>A.sel[o.k] && o.show() && o.plan).map(o=>o.plan).join(' ');
-  return `${diagLabel()}. ${TYPES[A.type].short} ${fmtMY(A.date)}: AHI ${num(A.ahi)}/h${A.sup!=null?` (supine ${num(A.sup)})`:''}, central AHI ${num(A.cahi)}, SpO2 nadir ${num(A.nad)}%, ${num(A.t89)} min <89%.${plans?' '+plans:''}`;
+  return `${diagLabel()}. ${TYPES[A.type].short} ${fmtMY(A.date)}: AHI ${num(A.ahi)}/h${A.sup!=null?` (supine ${num(A.sup)})`:''}, central AHI ${num(A.cahi)}, SpO2 nadir ${num(A.nad)}%, ${num(A.t89)} min <89%.${csaNoted() && !central() ? ' Central apnea component noted by interpreting physician.' : ''}${plans?' '+plans:''}`;
 }
 
 const CLOSING = 'Sleep apnea can be a complex and sometimes confusing condition. If you find you have a number of questions or just want to talk over the results in more detail, please schedule an appointment.';
@@ -234,7 +237,7 @@ function render(){
   renderTrail();
   if (id === '@result') return renderResult();
   const n = nodes[id], q = typeof n.q==='function' ? n.q() : n.q;
-  let h = `<div class="step">Step ${stack.length}</div><h2>${q}</h2>${n.hint?`<p class="hint">${n.hint}</p>`:''}`;
+  let h = `<div class="step">Step ${stack.length}</div><h2>${q}</h2>${n.hint?`<p class="hint">${typeof n.hint==='function'?n.hint():n.hint}</p>`:''}`;
   if (n.kind==='yn'){
     h += `<div class="choices"><button class="choice" id="b-yes">Yes</button><button class="choice" id="b-no">No</button></div>`;
   } else if (n.kind==='multi'){
@@ -273,6 +276,7 @@ function render(){
 function flags(){
   const f = [osa() ? `${sev()[0].toUpperCase()+sev().slice(1)} (AHI ${num(A.ahi)})` : `Normal (AHI ${num(A.ahi)})`];
   if (central()) f.push('Central-predominant');
+  if (csaNoted() && !central()) f.push('Central apnea noted by reader');
   if (positional()) f.push('Positional');
   if (hypox()) f.push(`Hypoxemia (${num(A.t89)} min <89%)`);
   if (obese()) f.push(`BMI ${num(A.bmi)}`);
@@ -322,7 +326,8 @@ function bindResults(){
     if (t89==null || isNaN(t89) || t89<0 || t89>720) return err.textContent='Enter the minutes below 89% (0 if none).';
     if (bmi==null || isNaN(bmi) || bmi<12 || bmi>90) return err.textContent='Enter the BMI as a number from 12 to 90.';
     Object.assign(A, {date:d, ahi, sup, cahi, nad, t89, bmi});
-    push('outc');
+    if (A.cahi <= 1) delete A.csa;
+    push(A.cahi > 1 ? 'csa' : 'outc');
   };
 }
 
@@ -372,6 +377,7 @@ function renderTrail(){
   ids.forEach(id=>{
     if (id==='type') items.push(['Study type', TYPES[A.type].short]);
     if (id==='ref') items.push(['Sleep clinic referral', yn(A.ref)]);
+    if (id==='csa') items.push(['Physician comment on central apnea', yn(A.csa)]);
     if (id==='results'){
       items.push(['Study date', fmtMY(A.date)], ['AHI', `${num(A.ahi)}/h${A.sup!=null?` (supine ${num(A.sup)})`:''}`], ['Central AHI', num(A.cahi)], ['SpO2 nadir', num(A.nad)+'%'], ['Time <89%', num(A.t89)+' min'], ['BMI', num(A.bmi)]);
     }
