@@ -61,7 +61,41 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
 - **Nurse pool message** (appointment-required outcomes): call patient, osteoporosis on DEXA, schedule appointment, labs beforehand. Order BMP, PTH, 25-OH vitamin D, and CBC.
 - **MyChart message** (all other outcomes): first person, with calcium guidance (1,000–1,200 mg/day, calcium citrate if supplementing, ≤500–600 mg per dose) and a link to the NIH calcium fact sheet.
 
-## Open items
+## Sleep study workflow (`sleep.html`)
+
+A second tool on the same site, built the same way (one file, no build step, no patient data). The two pages link to each other from their headers.
+
+**Steps**
+
+1. **Study type:** home sleep study, in-lab PSG, or split-night (diagnostic portion only).
+2. **Sleep clinic referral placed with the order?** Decides who owns treatment.
+3. **Results:** study month/year, AHI, supine AHI (optional), central AHI, SpO2 nadir, minutes <89% (hidden and left out of the problem-list line when the nadir is above 88%), BMI. Labels match the Nomad report.
+4. **Central apnea comment** (only if central AHI >1): did the interpreting physician comment on central sleep apnea? Yes adds a note to the problem-list line and counts as a central component.
+5. **Outcomes checklist**, pre-checked by rule, every box editable.
+6. **Output:** problem-list line plus a MyChart message, or a nurse pool message if *Visit with PCP* is checked.
+
+**Calculated values:** severity (<5 normal, 5–14.9 mild, 15–29.9 moderate, ≥30 severe); central-predominant (central AHI > 50% of AHI); positional (supine AHI ≥ 2× AHI); hypoxemia (≥5 min <89%, shown as a flag and an on-screen note); obesity (BMI ≥30).
+
+**Pre-check rules** (`OUT` array in the script; its order is also the paragraph order of the MyChart message):
+
+| Outcome | Pre-checked when |
+| --- | --- |
+| Normal, no further testing | AHI <5 |
+| Normal home study → in-lab PSG | Never (shown for home studies only) |
+| Wait for sleep clinic | OSA and referred |
+| Offer auto-CPAP (+ 1–3 month follow-up) | OSA, not referred, not central-predominant |
+| Titration study | OSA, not referred, central-predominant |
+| Offer sleep clinic referral | Not referred, central-predominant |
+| Oral appliance | Mild OSA |
+| Positional therapy | Positional |
+| Weight management | BMI ≥30 (tirzepatide line added if moderate/severe and no central component: not central-predominant, central AHI <5, and no physician comment on central apnea) |
+| Visit with PCP | Never; switches output to a nurse pool message |
+
+Every OSA message gets fixed drowsy-driving and alcohol/sedative lines. On-screen notes appear if auto-CPAP is checked for a central-predominant study, or when any hypoxemia is present (consider oximetry on CPAP).
+
+**Open items:** confirm PSG report labels match the Nomad terms; nurse pool default visit length and timeframe.
+
+## Open items (DEXA)
 
 - Gray-zone handling for near-threshold FRAX (not built; strict 20%/3% cutoffs).
 - Possible rule: a moderate drop on two consecutive scans → appointment for untreated patients.
