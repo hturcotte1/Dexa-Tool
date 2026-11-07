@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Sleep Study Results Workflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one centered column; a single question card at a time, path-so-far trail beneath. */
+:root{
+  --bg:#F3F5F8; --card:#FFFFFF; --ink:#18212E; --muted:#5A6577; --line:#D9DEE6;
+  --accent:#2F5D8A; --accent-ink:#FFFFFF; --accent-soft:#E6EEF6;
+  --ok:#2E6B4F; --ok-soft:#E5F2EB; --warn:#8A5A12; --warn-soft:#FBF0DC; --err:#A33A2B;
+  --font-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161D; --card:#19202A; --ink:#E6EAF0; --muted:#9AA5B5; --line:#2C3542;
+  --accent:#7FA9D6; --accent-ink:#0E1620; --accent-soft:#1F2C3B;
+  --ok:#7CC6A0; --ok-soft:#18291F; --warn:#E3B565; --warn-soft:#2E2414; --err:#F08A7A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161D; --card:#19202A; --ink:#E6EAF0; --muted:#9AA5B5; --line:#2C3542;
+  --accent:#7FA9D6; --accent-ink:#0E1620; --accent-soft:#1F2C3B;
+  --ok:#7CC6A0; --ok-soft:#18291F; --warn:#E3B565; --warn-soft:#2E2414; --err:#F08A7A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+h1{font-size:24px;font-weight:600;margin:0;text-wrap:balance}
+.scope{margin:0;font-size:14px;color:var(--ink);background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;display:flex;flex-direction:column;gap:18px}
+.step{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+h2{font-size:20px;font-weight:600;margin:0;text-wrap:balance;line-height:1.3}
+.hint{color:var(--muted);font-size:14px;margin:-8px 0 0}
+.choices{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}
+.choice{flex:1 1 140px;padding:14px 16px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font-weight:500;font-size:16px;text-align:left}
+.choice:hover{border-color:var(--accent);background:var(--accent-soft)}
+.choices.col{flex-direction:column}
+.fxlist{display:flex;flex-direction:column;gap:10px}
+.fxrow{display:flex;flex-direction:column;gap:8px}
+.fxt{display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%}
+.choice.on{border-color:var(--accent);background:var(--accent-soft)}
+.fxsub{padding-left:14px}
+.infobtn{align-self:flex-start;margin-top:-10px}
+.info{font-size:14px;background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:4px 14px;margin-top:-8px}
+.info p{margin:10px 0}
+.choices.col .choice{flex:none;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.choice small{font-size:13px;font-weight:400;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:14px;font-weight:500}
+.field .opt{color:var(--muted);font-weight:400}
+.lbl{font-size:14px;font-weight:500}
+.segs{display:flex;flex-wrap:wrap;gap:8px}
+.seg{padding:9px 14px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font-size:15px;font-weight:500}
+.seg:hover{border-color:var(--accent)}
+.seg.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+textarea{font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%;resize:vertical}
+textarea:focus{outline:2px solid var(--accent);outline-offset:2px}
+input,select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%;max-width:260px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row .field{flex:1 1 160px}
+.err{color:var(--err);font-size:13px;min-height:0}
+.primary{align-self:flex-start;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:12px 20px;font-weight:600}
+.nav{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap}
+.link{background:none;border:0;color:var(--accent);padding:4px 0;font-weight:500;font-size:14px}
+.trail{display:flex;flex-direction:column;gap:6px}
+.trail h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 2px}
+.trail ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.trail li{display:flex;justify-content:space-between;gap:12px;font-size:14px;border-bottom:1px dashed var(--line);padding:4px 0}
+.trail li span:first-child{color:var(--muted);min-width:0}
+.trail li span:last-child{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.outcome{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-radius:8px;background:var(--ok-soft);color:var(--ok)}
+.warnbox{padding:12px 16px;border-radius:8px;background:var(--warn-soft);color:var(--ink);border:1px solid var(--warn);font-size:15px}
+.warnbox strong{color:var(--warn)}
+.outcome.tbd{background:var(--warn-soft);color:var(--warn)}
+.outcome strong{font-size:17px}
+.outcome span{font-size:14px;color:var(--ink)}
+.out-block{display:flex;flex-direction:column;gap:8px}
+.out-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.out-head h3{font-size:14px;font-weight:600;margin:0}
+.copy{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:7px 14px;font-weight:600;font-size:14px;min-width:84px}
+.copy.done{background:var(--ok);color:var(--card)}
+.box{font-family:var(--font-mono);font-size:14px;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;white-space:pre-wrap;word-break:break-word;user-select:all}
+.box.msg{font-family:var(--font-body);font-size:15px;user-select:text}
+footer{font-size:12px;color:var(--muted);line-height:1.5}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .18s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+<style>
+/* Sleep-tool additions */
+.toollink{font-size:14px;color:var(--accent);text-decoration:none;font-weight:500;align-self:flex-start}
+.toollink:hover{text-decoration:underline}
+.chk{display:flex;flex-direction:column;gap:8px}
+.chk .choice{flex:none;display:flex;gap:12px;align-items:flex-start;text-align:left}
+.chk .box-ind{flex:none;width:20px;height:20px;border:2px solid var(--line);border-radius:4px;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;color:var(--accent-ink)}
+.chk .choice.on .box-ind{background:var(--accent);border-color:var(--accent)}
+.chk .txt{display:flex;flex-direction:column;gap:2px}
+.chk .txt small{font-size:13px;font-weight:400;color:var(--muted)}
+.tag{display:inline-block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;color:var(--ok);background:var(--ok-soft);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.flags{display:flex;flex-wrap:wrap;gap:6px}
+.flag{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--line);color:var(--ink)}
+.npopts{display:flex;flex-direction:column;gap:12px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Sleep medicine · in-basket</span>
+    <h1>Sleep study results workflow</h1>
+    <a class="toollink" href="index.html">← DEXA results workflow</a>
+  </header>
+  <p class="scope"><strong>For adult home sleep apnea tests and in-lab polysomnograms.</strong> For split-night studies, enter the diagnostic portion only. Titration results are for sleep clinic to interpret.</p>
+  <section class="card" id="card" aria-live="polite"></section>
+  <section class="trail" id="trail" hidden>
+    <h3>Answers so far</h3>
+    <ol id="trailList"></ol>
+  </section>
+  <footer>Decision aid only. Severity by AHI per American Academy of Sleep Medicine (5 / 15 / 30 events per hour). Central-predominant: central AHI more than half of total AHI. Hypoxemia flag: 5 minutes or more below 89% (ICSD-3 / CMS threshold of SpO2 ≤88% for ≥5 minutes). CPAP follow-up 31–90 days after starting reflects the Medicare adherence rule. Use clinical judgment.</footer>
+</div>
+
+<script>
+const A = {}; let stack = ['type'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtMY = s => { const [y,m]=s.split('-'); return `${String(+m).padStart(2,'0')}/${y}`; };
+const num = v => String(+(+v).toFixed(1));
+const yn = v => v ? 'Yes' : 'No';
+
+const TYPES = {
+  HSAT:{label:'Home sleep apnea test (HSAT)', sub:'Nomad or other home device', short:'HSAT'},
+  PSG:{label:'In-lab polysomnogram (PSG)', sub:'Full-night diagnostic study', short:'PSG'},
+  SPLIT:{label:'Split-night study', sub:'Enter the diagnostic portion only', short:'Split-night PSG'},
+};
+
+// Derived values
+const osa = () => A.ahi >= 5;
+const sev = () => A.ahi < 5 ? 'normal' : A.ahi < 15 ? 'mild' : A.ahi < 30 ? 'moderate' : 'severe';
+const central = () => osa() && A.cahi > A.ahi / 2;
+const positional = () => osa() && A.sup != null && A.sup >= 2 * A.ahi;
+const hypox = () => osa() && A.t89 >= 5;
+const sigHyp = () => hypox() && A.hyp === 'Sustained';
+const obese = () => A.bmi >= 30;
+const modSev = () => sev()==='moderate' || sev()==='severe';
+
+const nodes = {
+  type:{kind:'multi', q:'What type of sleep study was done?', label:'Study type',
+    opts:Object.entries(TYPES).map(([k,t])=>[t.label,t.sub,'ref',k])},
+  ref:{kind:'yn', q:'Was a sleep clinic referral placed with the sleep study order?', hint:'Yes means sleep clinic will follow this patient and order treatment. No means you are managing the results.', label:'Sleep clinic referral', key:'ref', yes:'results', no:'results'},
+  results:{kind:'results', q:'Enter the results from the report', hint:'Labels match the Nomad report (Nomad AHI, supine Nomad AHI, Nomad CAHI).'},
+  hyp:{kind:'multi', q:()=>`Oxygen was below 89% for ${num(A.t89)} minutes. Is the hypoxemia mostly cyclic or sustained?`, hint:'Check the interpreting physician’s comments. Cyclic desaturation with apneas usually resolves with CPAP; sustained desaturation between events suggests hypoventilation.', label:'Hypoxemia pattern',
+    opts:[['Mostly cyclic, with events','Dips with breathing events','outc','Cyclic'],['Sustained, or hypoventilation suspected','COPD, obesity hypoventilation, neuromuscular disease','outc','Sustained']]},
+  outc:{kind:'outcomes', q:'Choose the outcomes', hint:'Suggested outcomes are pre-checked. Change any of them.'},
+};
+
+// Outcome checklist. Order here = order of paragraphs in the MyChart message.
+const OUT = [
+  {k:'normNone', label:'Normal study, no further testing', show:()=>!osa(), def:()=>true, excl:'normPSG'},
+  {k:'normPSG', label:'Normal home test, but symptoms suggest OSA: order in-lab PSG', show:()=>!osa() && A.type==='HSAT', def:()=>false, plan:'In-lab PSG ordered.', excl:'normNone'},
+  {k:'wait', label:'Wait for initial sleep clinic appointment', show:()=>osa() && A.ref, def:()=>true, plan:'Followed by sleep clinic.'},
+  {k:'cpap', label:'Offer auto-titrating CPAP', sub:'Patient replies to accept; you send the DME order', show:osa, def:()=>!A.ref && !central() && !sigHyp(), plan:'Auto-CPAP offered.'},
+  {k:'cpapFU', label:'CPAP follow-up visit 1–3 months after starting', sub:'Medicare adherence visit (days 31–90)', show:osa, def:()=>!A.ref && !central() && !sigHyp()},
+  {k:'titr', label:'Order titration study', show:osa, def:()=>!A.ref && (central() || sigHyp()), plan:'Titration study ordered.'},
+  {k:'sleepRef', label:'Offer sleep clinic referral', show:()=>osa() && !A.ref, def:()=>central() || sigHyp(), plan:'Sleep clinic referral offered.'},
+  {k:'oral', label:'Oral appliance as an alternative', show:osa, def:()=>sev()==='mild'},
+  {k:'pos', label:'Positional therapy', sub:'Supine AHI at least twice the overall AHI', show:()=>osa() && A.sup != null, def:positional},
+  {k:'wt', label:'Weight management', sub:()=>obese() && modSev() ? 'Includes tirzepatide (Zepbound) mention' : 'BMI 30 or higher', show:osa, def:obese},
+  {k:'pcp', label:'Visit with PCP', sub:'Sends a nurse pool message instead of MyChart', show:()=>true, def:()=>false, plan:'PCP visit requested.'},
+];
+const shown = () => OUT.filter(o=>o.show());
+function defaults(){ const s={}; shown().forEach(o=>{ if(o.def()) s[o.k]=true; }); return s; }
+
+function diagLabel(){
+  if (!osa()) return 'No sleep apnea on sleep study';
+  if (central()) return `Sleep apnea, central-predominant, ${sev()}`;
+  return `Obstructive sleep apnea, ${sev()}${positional()?', positional':''}`;
+}
+function problemLine(){
+  const plans = OUT.filter(o=>A.sel[o.k] && o.show() && o.plan).map(o=>o.plan).join(' ');
+  return `${diagLabel()}. ${TYPES[A.type].short} ${fmtMY(A.date)}: AHI ${num(A.ahi)}/h${A.sup!=null?` (supine ${num(A.sup)})`:''}, central AHI ${num(A.cahi)}, SpO2 nadir ${num(A.nad)}%, ${num(A.t89)} min <89%.${plans?' '+plans:''}`;
+}
+
+const CLOSING = 'Sleep apnea can be a complex and sometimes confusing condition. If you find you have a number of questions or just want to talk over the results in more detail, please schedule an appointment.';
+const SAFETY = 'Until your sleep apnea is treated, please avoid driving or other risky activities if you feel drowsy. Alcohol and sedating medications near bedtime can make sleep apnea worse, so it is best to avoid them.';
+
+function myChart(){
+  const s = A.sel, X = Math.round(A.ahi), P = [];
+  let open;
+  if (!osa()) open = `Your sleep study results are back, and they did not show sleep apnea. Your breathing paused or became shallow about ${X} times per hour; fewer than 5 is normal.`;
+  else if (central()) open = 'Your sleep study results are back. They show sleep apnea in which many of the breathing pauses happen because the brain briefly stops signaling the body to breathe (called central sleep apnea). This type needs a more detailed evaluation than the usual kind.';
+  else {
+    open = `Your sleep study results are back. They show ${sev()} obstructive sleep apnea, which means your airway narrows or closes during sleep and your breathing pauses or becomes shallow — about ${X} times per hour (fewer than 5 is normal).`;
+    if (modSev()) open += ' Untreated, sleep apnea can affect energy, mood, and memory and raises the risk of high blood pressure, heart disease, and stroke. The good news is that it is very treatable.';
+  }
+  if (hypox()) open += ` Your oxygen level also dropped during sleep, to a low of ${num(A.nad)}%, and was below 89% for ${num(A.t89)} minutes.`;
+  P.push(open);
+  const T = {
+    normNone:'No further testing is needed. If you keep having trouble with sleep or daytime tiredness, please let us know.',
+    normPSG:'Home tests can sometimes miss sleep apnea. Because your symptoms still suggest it, I recommend an overnight study in the sleep lab. I have placed the order, and the sleep lab will call you to schedule.',
+    wait:'You were referred to the sleep clinic when your study was ordered. They will contact you to schedule a visit to discuss treatment options, including CPAP. If you have not heard from them in 2 weeks, please let us know.',
+    cpap:'The most effective treatment is a CPAP machine, which gently blows air through a mask to keep your airway open while you sleep. The machine I recommend adjusts its pressure automatically. If you would like to start, reply to this message and I will send an order to a medical supply company, which will contact you to set up the machine and fit a mask.',
+    cpapFU:'Once you start CPAP, please schedule a visit with me 1 to 3 months later to review how it is going. Most insurance plans require this visit to keep covering the machine.',
+    titr:'Before starting treatment, I recommend a second overnight study in the sleep lab to find the right type and settings of breathing support for you. I have placed the order, and the sleep lab will call you to schedule.',
+    sleepRef:'Because of these findings, I recommend seeing a sleep specialist. If you agree, reply to this message and I will place the referral.',
+    oral: sev()==='mild'
+      ? 'Another option for mild sleep apnea is an oral appliance — a custom mouthpiece made by a dentist that holds your lower jaw forward during sleep. Let me know if you would like to discuss it.'
+      : 'If CPAP does not work for you, another option is an oral appliance — a custom mouthpiece made by a dentist that holds your lower jaw forward during sleep. Let me know if you would like to discuss it.',
+    pos:'Your breathing pauses were much more frequent when you slept on your back. Sleeping on your side may help, and devices such as a positional pillow or a wearable that vibrates when you roll onto your back can make that easier.',
+    wt:'Weight loss can improve sleep apnea, and for some people it goes away.' + (modSev() && obese() ? ' There is also an FDA-approved medication, tirzepatide (Zepbound), for moderate to severe sleep apnea in people with obesity. Let me know if you would like to talk about it.' : ''),
+  };
+  OUT.forEach(o=>{ if (s[o.k] && o.show() && T[o.k]) P.push(T[o.k]); });
+  if (osa()) P.push(SAFETY);
+  P.push(CLOSING);
+  return P.join('\n\n');
+}
+
+const NP = {len:'20', tf:'2 weeks', reason:null};
+const REASONS = ['Normal study with ongoing symptoms','Review findings before sleep clinic','Review sleep study findings'];
+function npDefaultReason(){ return !osa() ? REASONS[0] : A.ref ? REASONS[1] : REASONS[2]; }
+function nursePool(line){
+  return `Please schedule a ${NP.len}-minute visit with me within ${NP.tf} to review sleep study results.\nReason: ${NP.reason.toLowerCase()}.\nPlease tell the patient: "Your sleep study results are back, and your provider would like to go over them with you at a visit."\nProblem-list line: ${line}`;
+}
+
+const card = document.getElementById('card');
+
+function render(){
+  const id = stack[stack.length-1];
+  renderTrail();
+  if (id === '@result') return renderResult();
+  const n = nodes[id], q = typeof n.q==='function' ? n.q() : n.q;
+  let h = `<div class="step">Step ${stack.length}</div><h2>${q}</h2>${n.hint?`<p class="hint">${n.hint}</p>`:''}`;
+  if (n.kind==='yn'){
+    h += `<div class="choices"><button class="choice" id="b-yes">Yes</button><button class="choice" id="b-no">No</button></div>`;
+  } else if (n.kind==='multi'){
+    h += `<div class="choices col">${n.opts.map((o,i)=>`<button class="choice" data-i="${i}"><span>${o[0]}</span><small>${o[1]}</small></button>`).join('')}</div>`;
+  } else if (n.kind==='results'){
+    const f = (id,label,val,opt,ph) => `<div class="field"><label for="${id}">${label}${opt?' <span class="opt">(optional)</span>':''}</label><input type="number" id="${id}" step="0.1" inputmode="decimal" ${ph?`placeholder="${ph}"`:''} value="${val??''}"></div>`;
+    h += ymCore(A.date || curYM(), 2, new Date().getFullYear(), 'Study year', 'Study month')
+      + `<div class="row">${f('f-ahi','AHI (events/hour)',A.ahi,false,'Nomad AHI')}${f('f-sup','Supine AHI (events/hour)',A.sup,true,'Supine Nomad AHI')}</div>`
+      + `<div class="row">${f('f-cahi','Central AHI (events/hour)',A.cahi,false,'Nomad CAHI')}${f('f-nad','SpO2 nadir (%)',A.nad,false)}</div>`
+      + `<div class="row">${f('f-t89','Time with SpO2 <89% (minutes)',A.t89,false)}${f('f-bmi','BMI (kg/m²)',A.bmi,false)}</div>`
+      + `<div class="err" id="err"></div><button class="primary" id="b-next">Continue</button>`;
+  } else if (n.kind==='outcomes'){
+    h += `<div class="flags">${flags().map(f=>`<span class="flag">${f}</span>`).join('')}</div><div class="chk" id="chk"></div><div class="err" id="err"></div><button class="primary" id="b-next">Show results</button>`;
+  }
+  h += `<div class="nav">${stack.length>1?'<button class="link" id="b-back">← Back</button>':'<span></span>'}${stack.length>1?'<button class="link" id="b-restart">Start over</button>':''}</div>`;
+  card.innerHTML = h;
+  bindNav();
+  if (n.kind==='yn'){
+    const go = v => { A[n.key] = v; push(v ? n.yes : n.no); };
+    document.getElementById('b-yes').onclick = () => go(true);
+    document.getElementById('b-no').onclick = () => go(false);
+  } else if (n.kind==='multi'){
+    card.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ const o=n.opts[+b.dataset.i]; A[id==='type'?'type':'hyp'] = o[3]; push(o[2]); });
+  } else if (n.kind==='results'){
+    bindResults();
+  } else if (n.kind==='outcomes'){
+    drawChecklist();
+    document.getElementById('b-next').onclick = () => {
+      if (!Object.keys(A.sel).length) return document.getElementById('err').textContent = 'Choose at least one outcome.';
+      push('@result');
+    };
+  }
+  const first = card.querySelector('input,.choice'); if (first) first.focus({preventScroll:true});
+}
+
+function flags(){
+  const f = [osa() ? `${sev()[0].toUpperCase()+sev().slice(1)} (AHI ${num(A.ahi)})` : `Normal (AHI ${num(A.ahi)})`];
+  if (central()) f.push('Central-predominant');
+  if (positional()) f.push('Positional');
+  if (hypox()) f.push(sigHyp() ? 'Sustained hypoxemia' : 'Cyclic hypoxemia');
+  if (obese()) f.push(`BMI ${num(A.bmi)}`);
+  f.push(A.ref ? 'Referred to sleep clinic' : 'Not referred');
+  return f;
+}
+
+function drawChecklist(){
+  const box = document.getElementById('chk');
+  box.innerHTML = shown().map(o=>{ const on=!!A.sel[o.k], sub=typeof o.sub==='function'?o.sub():o.sub;
+    return `<button type="button" class="choice ${on?'on':''}" data-k="${o.k}" aria-pressed="${on}"><span class="box-ind">${on?'✓':''}</span><span class="txt"><span>${o.label}${o.def()?'<span class="tag">Suggested</span>':''}</span>${sub?`<small>${sub}</small>`:''}</span></button>`; }).join('');
+  box.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.k, o=OUT.find(x=>x.k===k), on=!A.sel[k];
+    if (on) A.sel[k]=true; else delete A.sel[k];
+    if (on && o.excl) delete A.sel[o.excl];
+    if (k==='cpap' && osa()) { if (on) A.sel.cpapFU=true; else delete A.sel.cpapFU; }
+    document.getElementById('err').textContent='';
+    drawChecklist();
+  });
+}
+
+function curYM(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+
+function bindResults(){
+  const err = document.getElementById('err');
+  card.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>err.textContent=''));
+  const yold = document.getElementById('f-eyold');
+  yold.onchange = () => card.querySelectorAll('.yseg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')});
+  card.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{
+    if (b.classList.contains('yseg')) yold.value='';
+    b.parentElement.querySelectorAll('.seg').forEach(x=>{x.classList.remove('on');x.setAttribute('aria-pressed','false')});
+    b.classList.add('on'); b.setAttribute('aria-pressed','true'); err.textContent='';
+  });
+  document.getElementById('b-next').onclick = () => {
+    const [y,m] = readYM();
+    if (!y) return err.textContent='Choose the year of the study.';
+    if (!m) return err.textContent='Choose the month of the study.';
+    const d = `${y}-${String(m).padStart(2,'0')}`;
+    if (d > curYM()) return err.textContent='The study date cannot be in the future.';
+    const v = id => { const s=document.getElementById(id).value.trim(); return s==='' ? null : parseFloat(s); };
+    const ahi=v('f-ahi'), sup=v('f-sup'), cahi=v('f-cahi'), nad=v('f-nad'), t89=v('f-t89'), bmi=v('f-bmi');
+    if (ahi==null || isNaN(ahi) || ahi<0 || ahi>150) return err.textContent='Enter the AHI as a number from 0 to 150.';
+    if (sup!=null && (isNaN(sup) || sup<0 || sup>200)) return err.textContent='Supine AHI should be a number from 0 to 200, or left blank.';
+    if (cahi==null || isNaN(cahi) || cahi<0) return err.textContent='Enter the central AHI (0 if none).';
+    if (cahi > ahi) return err.textContent='Central AHI cannot be higher than the total AHI.';
+    if (nad==null || isNaN(nad) || nad<40 || nad>100) return err.textContent='Enter the SpO2 nadir as a percent from 40 to 100.';
+    if (t89==null || isNaN(t89) || t89<0 || t89>720) return err.textContent='Enter the minutes below 89% (0 if none).';
+    if (bmi==null || isNaN(bmi) || bmi<12 || bmi>90) return err.textContent='Enter the BMI as a number from 12 to 90.';
+    Object.assign(A, {date:d, ahi, sup, cahi, nad, t89, bmi});
+    if (!hypox()) delete A.hyp;
+    push(hypox() ? 'hyp' : 'outc');
+  };
+}
+
+function ymCore(val, n, base, ylabel, mlabel){
+  const [vy,vm] = (val||'').split('-').map(Number);
+  const recent = Array.from({length:n},(_,i)=>base-i), older = Array.from({length:10},(_,i)=>base-n-i);
+  return `<div class="field" role="group" aria-labelledby="yr-lbl"><span class="lbl" id="yr-lbl">${ylabel}</span>
+    <div class="segs">${recent.map(y=>`<button type="button" class="seg yseg ${vy===y?'on':''}" data-y="${y}" aria-pressed="${vy===y}">${y}</button>`).join('')}</div>
+    <select id="f-eyold" aria-label="Earlier year"><option value="">Earlier year…</option>${older.map(y=>`<option ${vy===y?'selected':''}>${y}</option>`).join('')}</select></div>
+    <div class="field" role="group" aria-labelledby="mo-lbl"><span class="lbl" id="mo-lbl">${mlabel}</span>
+    <div class="segs">${MONTHS.map((mn,i)=>`<button type="button" class="seg mseg ${vm===i+1?'on':''}" data-m="${i+1}" aria-pressed="${vm===i+1}">${mn}</button>`).join('')}</div></div>`;
+}
+function readYM(){ const ys=card.querySelector('.yseg.on'), ms=card.querySelector('.mseg.on'); return [ys ? +ys.dataset.y : +document.getElementById('f-eyold').value, ms ? +ms.dataset.m : 0]; }
+
+function renderResult(){
+  const line = problemLine(), pcp = !!A.sel.pcp;
+  const title = !osa() ? 'No sleep apnea' : central() ? `Central-predominant sleep apnea, ${sev()}` : `Obstructive sleep apnea, ${sev()}`;
+  let h = `<div class="step">Result</div><div class="outcome"><strong>${title}</strong><span>${flags().join(' · ')}</span></div>`;
+  if (A.sel.cpap && (central() || sigHyp())) h += `<div class="warnbox"><strong>NOTE:</strong> Auto-CPAP is checked, but the study is ${central()?'central-predominant':'notable for sustained hypoxemia'}. Auto-CPAP can worsen central apnea and does not treat hypoventilation; a titration study is usually preferred.</div>`;
+  if (A.sel.cpap && hypox()) h += `<div class="warnbox"><strong>NOTE:</strong> Baseline hypoxemia present. Consider overnight oximetry on CPAP at follow-up; the CPAP download does not report oxygen.</div>`;
+  h += `<div class="out-block"><div class="out-head"><h3>Problem list</h3><button class="copy" data-for="pl">Copy</button></div><div class="box" id="pl">${esc(line)}</div></div>`;
+  if (pcp){
+    if (!NP.reason) NP.reason = npDefaultReason();
+    const segs = (key, vals, fmt=v=>v) => `<div class="segs">${vals.map(v=>`<button type="button" class="seg ${NP[key]===v?'on':''}" data-np="${key}" data-v="${v}" aria-pressed="${NP[key]===v}">${fmt(v)}</button>`).join('')}</div>`;
+    h += `<div class="npopts"><div class="field"><span class="lbl">Visit length</span>${segs('len',['20','40'],v=>v+' min')}</div>
+      <div class="field"><span class="lbl">Schedule within</span>${segs('tf',['1 week','2 weeks','1 month'])}</div>
+      <div class="field"><span class="lbl">Reason</span>${segs('reason',REASONS)}</div></div>`;
+    h += `<div class="out-block"><div class="out-head"><h3>Nurse pool message</h3><button class="copy" data-for="np">Copy</button></div><div class="box msg" id="np">${esc(nursePool(line))}</div></div>`;
+  } else {
+    h += `<div class="out-block"><div class="out-head"><h3>MyChart message</h3><button class="copy" data-for="mc">Copy</button></div><div class="box msg" id="mc">${esc(myChart())}</div></div>`;
+  }
+  h += `<div class="nav"><button class="link" id="b-back">← Back</button><button class="link" id="b-restart">Start over</button></div>`;
+  card.innerHTML = h; bindNav();
+  card.querySelectorAll('.copy').forEach(b=>b.onclick=()=>copy(b));
+  card.querySelectorAll('[data-np]').forEach(b=>b.onclick=()=>{ NP[b.dataset.np]=b.dataset.v; renderResult(); });
+}
+
+function copy(btn){
+  const el = document.getElementById(btn.dataset.for), text = el.textContent;
+  const ok = () => { btn.textContent='Copied'; btn.classList.add('done'); setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done')},1600); };
+  const fallback = () => { const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent='Press ⌘/Ctrl+C'; };
+  try { navigator.clipboard.writeText(text).then(ok, fallback); } catch(e){ fallback(); }
+}
+
+function renderTrail(){
+  const items = [], ids = stack.slice(0, -1);
+  ids.forEach(id=>{
+    if (id==='type') items.push(['Study type', TYPES[A.type].short]);
+    if (id==='ref') items.push(['Sleep clinic referral', yn(A.ref)]);
+    if (id==='results'){
+      items.push(['Study date', fmtMY(A.date)], ['AHI', `${num(A.ahi)}/h${A.sup!=null?` (supine ${num(A.sup)})`:''}`], ['Central AHI', num(A.cahi)], ['SpO2 nadir', num(A.nad)+'%'], ['Time <89%', num(A.t89)+' min'], ['BMI', num(A.bmi)]);
+    }
+    if (id==='hyp') items.push(['Hypoxemia pattern', A.hyp==='Sustained' ? 'Sustained' : 'Mostly cyclic']);
+  });
+  document.getElementById('trail').hidden = !items.length;
+  document.getElementById('trailList').innerHTML = items.map(([k,v])=>`<li><span>${k}</span><span>${esc(v)}</span></li>`).join('');
+}
+
+function bindNav(){
+  const b=document.getElementById('b-back'), r=document.getElementById('b-restart');
+  if (b) b.onclick = () => { stack.pop(); render(); };
+  if (r) r.onclick = () => { for (const k in A) delete A[k]; NP.reason=null; stack=['type']; render(); };
+}
+function push(id){
+  if (id==='outc') { A.sel = defaults(); NP.reason = null; }
+  stack.push(id); render();
+}
+render();
+</script>
+</body>
+</html>
