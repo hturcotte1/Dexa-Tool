@@ -4,7 +4,8 @@ A one-question-at-a-time decision aid for clinicians reviewing DEXA results from
 
 ## Technical summary
 
-- **One file:** `index.html`. Plain HTML, CSS, and vanilla JavaScript. No build step, no frameworks, no server, no database.
+- **Site layout:** `index.html` is a menu linking to each tool; the DEXA tool is `dexa.html` and the sleep tool is `sleep.html`. Each tool page links back to the menu.
+- **One file per tool:** `dexa.html`. Plain HTML, CSS, and vanilla JavaScript. No build step, no frameworks, no server, no database.
 - **External dependency:** Google Fonts only (Public Sans, IBM Plex Mono), with system-font fallbacks.
 - **No patient data:** nothing is stored or transmitted. All state lives in page memory and clears on reload.
 - **Hosting:** drop the file on any static host (intranet web server, GitHub Pages, Netlify, SharePoint page, etc.).
@@ -63,7 +64,7 @@ For patients 50 and older with eGFR above 35. Stated at the top of the page.
 
 ## Sleep study workflow (`sleep.html`)
 
-A second tool on the same site, built the same way (one file, no build step, no patient data). The two pages link to each other from their headers.
+A second tool on the same site, built the same way (one file, no build step, no patient data). It is listed on the menu page (`index.html`).
 
 **Steps**
 
